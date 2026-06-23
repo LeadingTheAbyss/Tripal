@@ -131,6 +131,12 @@ def get_recommendations(preferences: dict):
       }
     ]
 
+@app.get("/api/image")
+def get_place_image(q: str):
+    from services.image_service import fetch_real_image
+    url = fetch_real_image(q)
+    return {"url": url}
+
 import requests
 from typing import List, Dict, Any
 

@@ -5,7 +5,8 @@ from models.enums import TransportType, Weather
 from models.state import TripState
 from data.mock_db import MOCK_PLACES_DB, MOCK_HOTEL_DB
 from engines.safety_engine import calculate_safety_score
-from services.google_places_api import fetch_live_tourist_places, fetch_live_taxi_services
+from services.google_places_api import fetch_live_taxi_services
+from services.overpass_places_api import fetch_overpass_places
 from services.live_hotels_api import search_live_hotels
 from services.live_flights_api import search_live_flights
 from services.live_trains_api import search_live_trains
@@ -13,7 +14,7 @@ from services.osrm_cab_api import search_live_cabs
 
 def rank_transport(source: str, dest: str, date: datetime, passengers: List[Passenger]) -> List[TransportOption]:
     # Simple IATA mapping for the simulation
-    iata_map = {"Delhi": "DEL", "Mumbai": "BOM", "Goa": "GOI"}
+    iata_map = {"Delhi": "DEL", "Mumbai": "BOM", "Goa": "GOI", "Lucknow": "LKO"}
     origin_iata = iata_map.get(source, "DEL")
     dest_iata = iata_map.get(dest, "GOI")
     
@@ -46,7 +47,11 @@ def rank_transport(source: str, dest: str, date: datetime, passengers: List[Pass
     return transports
 
 def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
-    places = MOCK_PLACES_DB.get(city, [])
+    places = fetch_overpass_places(city)
+    if not places:
+        # Fallback if Overpass API fails or is empty
+        places = MOCK_PLACES_DB.get(city, [])
+    
     scored_places = []
     
     for p in places:
