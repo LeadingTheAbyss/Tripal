@@ -121,10 +121,10 @@ export default function HotelsPage() {
                     key={hotel.id}
                     onClick={() => handleSelectHotel(hotel)}
                     className={`
-                      relative flex items-center justify-between p-6 rounded-2xl border-2 cursor-pointer transition-all
+                      relative flex items-center justify-between p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 hover:-translate-y-1
                       ${isSelected 
-                        ? 'border-blue-500 bg-blue-900/10 shadow-md shadow-blue-900/20' 
-                        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700 hover:shadow-lg'
+                        ? 'border-blue-500 bg-blue-900/10 shadow-lg shadow-blue-900/40' 
+                        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700 hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]'
                       }
                     `}
                   >

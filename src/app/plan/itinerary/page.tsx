@@ -77,6 +77,11 @@ export default function ItineraryPage() {
   const itinerary = useItineraryStore();
   
   const [activePlace, setActivePlace] = useState<Place | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Initialize days on mount
   useEffect(() => {
@@ -154,6 +159,8 @@ export default function ItineraryPage() {
       }
     }
   };
+
+  if (!isMounted) return null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-24 h-full flex flex-col">

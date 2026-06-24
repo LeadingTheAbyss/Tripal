@@ -491,7 +491,7 @@ export default function LandingPage() {
           {/* Faux "Epic" Logo area */}
           <div className="flex items-center gap-3 border-r border-white/10 pr-4 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="w-8 h-9 bg-white text-black flex items-center justify-center font-black text-[10px] leading-tight text-center rounded-sm">
-              GHUMI<br/>TRIPS
+              TRIP<br/>AL
             </div>
             <ChevronDown size={14} className="text-white/50" />
           </div>
@@ -501,7 +501,7 @@ export default function LandingPage() {
             <div className="w-7 h-7 rounded-full border-[2.5px] border-current flex items-center justify-center">
               <span className="font-bold text-sm leading-none mt-0.5">g</span>
             </div>
-            <span className="font-extrabold text-lg tracking-tight text-white mt-0.5">GHUMI ENGINE</span>
+            <span className="font-extrabold text-lg tracking-tight text-white mt-0.5">TRIPAL ENGINE</span>
           </div>
 
           {/* Links */}
@@ -631,7 +631,7 @@ export default function LandingPage() {
               {/* Card 2: Direct Planning Mode */}
               <div 
                 onClick={() => router.push('/plan/setup')}
-                className="bg-blue-600 border border-blue-500 p-8 rounded-3xl cursor-pointer hover:bg-blue-500 transition-all hover:scale-105 group shadow-2xl shadow-blue-900/50"
+                className="bg-blue-600 border border-blue-500 p-8 rounded-3xl cursor-pointer hover:bg-blue-500 transition-all duration-300 hover:scale-105 group shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_60px_-15px_rgba(37,99,235,0.7)]"
               >
                 <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
                   <span className="text-3xl">🗺️</span>

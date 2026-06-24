@@ -324,10 +324,10 @@ export default function PlacesPage() {
                   key={place.id}
                   onClick={() => setSelectedModalPlace(place)}
                   className={`
-                    relative flex flex-col rounded-3xl border-2 transition-all cursor-pointer overflow-hidden group
+                    relative flex flex-col rounded-3xl border-2 transition-all duration-300 cursor-pointer overflow-hidden group hover:-translate-y-1
                     ${isSelected 
-                      ? 'border-blue-500 bg-zinc-900 shadow-md shadow-blue-900/20' 
-                      : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700 hover:shadow-xl'
+                      ? 'border-blue-500 bg-zinc-900 shadow-lg shadow-blue-900/40' 
+                      : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700 hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]'
                     }
                   `}
                 >
