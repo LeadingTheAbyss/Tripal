@@ -6,7 +6,7 @@ from models.state import TripState
 from data.mock_db import MOCK_PLACES_DB, MOCK_HOTEL_DB
 from engines.safety_engine import calculate_safety_score
 from services.google_places_api import fetch_live_taxi_services
-from services.overpass_places_api import fetch_overpass_places
+from services.live_places_api import search_live_places
 from services.live_hotels_api import search_live_hotels
 from services.live_flights_api import search_live_flights
 from services.live_trains_api import search_live_trains
@@ -47,9 +47,9 @@ def rank_transport(source: str, dest: str, date: datetime, passengers: List[Pass
     return transports
 
 def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
-    places = fetch_overpass_places(city)
+    places = search_live_places(city)
     if not places:
-        # Fallback if Overpass API fails or is empty
+        # Fallback if Live API fails or is empty
         places = MOCK_PLACES_DB.get(city, [])
     
     scored_places = []
@@ -68,16 +68,20 @@ def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
     return [p for s, p in scored_places]
 
 def rank_hotels(city: str, trip: TripState) -> List[Hotel]:
-    # 1. Hit the Live API (or fallback to local DB)
-    try:
-        hotels = search_live_hotels(
-            city, 
-            trip.start_date.strftime("%Y-%m-%d"), 
-            trip.end_date.strftime("%Y-%m-%d")
-        )
-    except Exception as e:
-        print(f"[Fallback] Live API failed: {e}. Using local DB.")
+    hotels = search_live_hotels(city, 
+                              trip.start_date.strftime("%Y-%m-%d"), 
+                              trip.end_date.strftime("%Y-%m-%d"))
+    
+    if not hotels:
+        # Fallback if Live API fails or is empty
         hotels = MOCK_HOTEL_DB.get(city, [])
+        if not hotels:
+            # Generate generic fallback hotels so the UI doesn't break
+            hotels = [
+                Hotel(id=f"h1_{city}", name=f"The Grand {city} Resort", rating=4.5, price_per_night=8500, distance_to_cluster=1.2, safety_score=9, comfort_score=9, coordinates=(0.0,0.0)),
+                Hotel(id=f"h2_{city}", name=f"{city} Central Inn", rating=4.2, price_per_night=4500, distance_to_cluster=0.5, safety_score=8, comfort_score=7, coordinates=(0.0,0.0)),
+                Hotel(id=f"h3_{city}", name=f"Budget Stay {city}", rating=3.8, price_per_night=1500, distance_to_cluster=3.5, safety_score=7, comfort_score=6, coordinates=(0.0,0.0)),
+            ]
     
     # 2. Filter by remaining budget
     valid_hotels = [h for h in hotels if (h.price_per_night * trip.days) <= trip.remaining_budget]

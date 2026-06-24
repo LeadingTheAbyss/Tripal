@@ -40,10 +40,9 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
 
     if (val.length >= 1) {
       const filtered = INDIAN_CITIES.filter(city => 
-        city.name.toLowerCase().startsWith(val.toLowerCase()) || 
-        city.state.toLowerCase().startsWith(val.toLowerCase())
+        city.toLowerCase().startsWith(val.toLowerCase())
       )
-      .sort((a, b) => a.name.localeCompare(b.name)) // Alphabetical sort
+      .sort((a, b) => a.localeCompare(b)) // Alphabetical sort
       .slice(0, 8); // Top 8 matches
       
       setResults(filtered);
@@ -54,12 +53,9 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
     }
   };
 
-  const handleSelect = (city: any) => {
-    // Ideally we would also store the osrm_coords somewhere if needed,
-    // but for now, we just pass the formatted name to the parent.
-    const selectedName = city.name; // or city.formatted_name based on preference
-    setQuery(selectedName);
-    onChange(selectedName);
+  const handleSelect = (city: string) => {
+    setQuery(city);
+    onChange(city);
     setIsOpen(false);
   };
 
@@ -85,9 +81,8 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
             >
               <div className="font-semibold text-white flex items-center gap-2">
                 <MapPin size={14} className="text-zinc-500" />
-                {res.name}
+                {res}
               </div>
-              <div className="text-xs text-zinc-400 ml-6">{res.state}</div>
             </div>
           ))}
         </div>

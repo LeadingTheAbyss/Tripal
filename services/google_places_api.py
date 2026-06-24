@@ -11,7 +11,7 @@ load_dotenv()
 def get_google_key():
     key = os.getenv("GOOGLE_PLACES_API_KEY")
     if not key or key == "your_google_places_api_key_here":
-        raise ValueError("\n❌ MISSING API KEY: Please put your GOOGLE_PLACES_API_KEY in the .env file!")
+        raise ValueError("\n[ERROR] MISSING API KEY: Please put your GOOGLE_PLACES_API_KEY in the .env file!")
     return key
 
 def fetch_live_tourist_places(city: str) -> List[Place]:

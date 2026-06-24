@@ -44,7 +44,7 @@ CITY_TO_STATION = {
 }
 
 def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[TransportOption]:
-    print(f"\n[API Call] Fetching live trains (via local Indian Rail API): {origin_city} -> {dest_city} on {date}...")
+    print(f"\n[API Call] Fetching live trains (via IRCTC RapidAPI): {origin_city} -> {dest_city} on {date}...")
     
     # Strip any states from formatted names (e.g. "Lucknow, Uttar Pradesh" -> "Lucknow")
     clean_origin = origin_city.split(",")[0].strip()
@@ -57,30 +57,45 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
         print(f"[Warning] Could not map {clean_origin} or {clean_dest} to a station code.")
         return _get_fallback_trains(origin_city, dest_city, date)
 
-    url = "http://localhost:3001/trains/betweenStations"
+    api_key = os.getenv("RAPIDAPI_KEY")
+    if not api_key:
+        print("[Warning] No RAPIDAPI_KEY found in environment. Falling back to mock trains.")
+        return _get_fallback_trains(origin_city, dest_city, date)
+
+    # Format date from YYYY-MM-DD to DD-MM-YYYY for IRCTC RapidAPI
+    try:
+        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d-%m-%Y")
+    except Exception:
+        formatted_date = date
+
+    url = "https://irctc1.p.rapidapi.com/api/v3/trainBetweenStations"
     querystring = {
-        "from": origin_code,
-        "to": dest_code
+        "fromStationCode": origin_code,
+        "toStationCode": dest_code,
+        "dateOfJourney": formatted_date
+    }
+    headers = {
+        "x-rapidapi-key": api_key,
+        "x-rapidapi-host": "irctc1.p.rapidapi.com"
     }
 
     try:
-        response = requests.get(url, params=querystring, timeout=10)
+        response = requests.get(url, headers=headers, params=querystring, timeout=15)
         response.raise_for_status()
         data = response.json()
         
         options = []
-        if not data.get("success"):
-            print(f"[Warning] API returned failure or no trains found: {data.get('data')}")
+        if not data.get("status") or not data.get("data"):
+            print(f"[Warning] API returned failure or no trains found: {data.get('message', 'Unknown error')}")
             return _get_fallback_trains(origin_city, dest_city, date)
             
         train_list = data.get("data", [])
         
-        for idx, train_obj in enumerate(train_list[:5]): # Take top 5
-            train = train_obj.get("train_base", {})
-            train_num = train.get("train_no", f"T{idx}")
+        for idx, train in enumerate(train_list[:5]): # Take top 5
+            train_num = train.get("train_number", f"T{idx}")
             train_name = train.get("train_name", f"Train {train_num}")
-            dep_time_str = train.get("from_time", "08:00")
-            arr_time_str = train.get("to_time", "20:00")
+            dep_time_str = train.get("from_std", "08:00")
+            arr_time_str = train.get("to_sta", "20:00")
             
             try:
                 base_date = datetime.strptime(date, "%Y-%m-%d")
@@ -90,8 +105,12 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
                 arr_hour, arr_minute = map(int, arr_time_str.split(":"))
                 arr_time = base_date.replace(hour=arr_hour, minute=arr_minute)
                 
-                if arr_time < dep_time:
-                    arr_time += timedelta(days=1)
+                # Check for day crossing
+                from_day = int(train.get("from_day", 0))
+                to_day = int(train.get("to_day", 0))
+                if to_day > from_day or arr_time < dep_time:
+                    days_diff = max(to_day - from_day, 1)
+                    arr_time += timedelta(days=days_diff)
                     
                 duration_hours = (arr_time - dep_time).total_seconds() / 3600.0
             except Exception:
@@ -100,7 +119,9 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
                 duration_hours = 14.0
                 arr_time = dep_time + timedelta(hours=duration_hours)
             
-            price = 500 + (duration_hours * 100)
+            # Since IRCTC v3 betweenStations doesn't return exact fare without a specific fare query,
+            # we estimate realistic Indian Railways base fare (approx ₹80-120 per hour for 3A/2A average)
+            price = 500 + (duration_hours * 80)
             
             options.append(TransportOption(
                 id=f"tr_{train_num}_{idx}",
@@ -110,14 +131,14 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
                 duration_hours=round(duration_hours, 1),
                 price=float(price), 
                 safety_score=8,
-                comfort_score=6,
+                comfort_score=7,
                 provider=train_name
             ))
             
         return sorted(options, key=lambda x: x.price)
         
     except Exception as e:
-        print(f"Error fetching live trains from local API: {e}")
+        print(f"Error fetching live trains from IRCTC RapidAPI: {e}")
         return _get_fallback_trains(origin_city, dest_city, date)
 
 def _get_fallback_trains(source, dest, date_str):

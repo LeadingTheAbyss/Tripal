@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { Plus, Copy, Trash2, ArrowRight, MapPin, Calendar, IndianRupee } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import CityAutocomplete from '@/components/CityAutocomplete';
-import ModernDatePicker from '@/components/ModernDatePicker';
+import ModernDateRangePicker from '@/components/ModernDateRangePicker';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function TripSetupPage() {
@@ -49,7 +49,7 @@ export default function TripSetupPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-card p-8 rounded-2xl border border-border shadow-lg"
+          className="bg-card p-8 rounded-3xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300"
         >
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-foreground">
             <MapPin className="text-primary" /> Trip Details
@@ -61,10 +61,11 @@ export default function TripSetupPage() {
               value={trip.destination} 
               onChange={(val) => trip.setTripDetails({ destination: val })} 
             />
-            <ModernDatePicker 
-              label="Start Date"
-              value={trip.startDate}
-              onChange={(date) => trip.setTripDetails({ startDate: date })}
+            <ModernDateRangePicker 
+              label="Duration of Stay"
+              startDate={trip.startDate}
+              endDate={trip.endDate}
+              onChange={(start, end) => trip.setTripDetails({ startDate: start, endDate: end })}
               minDate={new Date().toISOString().split('T')[0]} // Cannot pick past dates
             />
             <div className="space-y-2">
@@ -74,7 +75,7 @@ export default function TripSetupPage() {
               <input 
                 type="number"
                 placeholder="e.g. 100000"
-                className="w-full p-3 bg-background border border-input rounded-lg text-foreground focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground transition-all duration-200"
+                className="w-full p-3 bg-background border border-input rounded-xl text-foreground focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground transition-all duration-200"
                 onChange={(e) => { /* budget state connected later */ }}
               />
             </div>
@@ -99,7 +100,7 @@ export default function TripSetupPage() {
                   animate={{ opacity: 1, height: 'auto', scale: 1 }}
                   exit={{ opacity: 0, height: 0, scale: 0.95 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-card border border-border rounded-xl p-4 flex flex-wrap gap-4 items-end relative group shadow-md hover:border-primary/50 transition-colors"
+                  className="bg-card border border-border rounded-2xl p-5 flex flex-wrap gap-5 items-end relative group shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-300"
                 >
                   <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
@@ -178,7 +179,7 @@ export default function TripSetupPage() {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               onClick={handleAddPassenger}
-              className="w-full py-4 border-2 border-dashed border-border rounded-xl text-muted-foreground hover:bg-muted hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 font-medium"
+              className="w-full py-4 border-2 border-dashed border-border/60 rounded-2xl text-muted-foreground hover:bg-primary/5 hover:border-primary hover:text-primary transition-all duration-300 flex items-center justify-center gap-2 font-medium"
             >
               <Plus size={20} /> Add Another Passenger
             </motion.button>
@@ -193,10 +194,10 @@ export default function TripSetupPage() {
           className="flex justify-end pt-8 border-t border-border"
         >
           <motion.button 
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleContinue}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all duration-300"
           >
             Find Transport <ArrowRight size={20} />
           </motion.button>

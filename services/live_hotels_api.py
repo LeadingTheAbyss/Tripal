@@ -10,7 +10,7 @@ load_dotenv()
 def get_serpapi_key():
     key = os.getenv("SERPAPI_KEY")
     if not key or key == "your_serpapi_key_here":
-        raise ValueError("\n❌ MISSING API KEY: Please put your SERPAPI_KEY in the .env file!")
+        raise ValueError("\n[ERROR] MISSING API KEY: Please put your SERPAPI_KEY in the .env file!")
     return key
 
 def search_live_hotels(city: str, check_in_date: str = None, check_out_date: str = None) -> List[Hotel]:

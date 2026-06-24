@@ -24,18 +24,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-border bg-card p-6 flex flex-col justify-between shrink-0">
+      <aside className="w-64 border-r border-border bg-card p-6 flex flex-col justify-between shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)] z-10">
         <div>
-          <h1 className="text-xl font-bold mb-8 text-primary">Ghumi-Ghumi ✈️</h1>
-          <nav className="space-y-2">
+          <h1 className="text-2xl font-black mb-8 tracking-tight text-foreground">Ghumi-<span className="text-primary">Ghumi</span> <span className="text-xl">✈️</span></h1>
+          <nav className="space-y-1.5">
             {navLinks.map(link => (
               <Link 
                 key={link.href}
                 href={link.href} 
-                className={`block px-3 py-2 rounded-lg font-medium transition-colors ${
+                className={`block px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
                   pathname.startsWith(link.href) 
-                    ? 'bg-primary/10 text-primary' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    ? 'bg-primary/10 text-primary font-bold shadow-sm translate-x-1' 
+                    : 'text-muted-foreground font-medium hover:text-foreground hover:bg-muted/50'
                 }`}
               >
                 {link.label}
@@ -45,33 +45,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         
         {/* Sticky Live Budget Widget */}
-        <div className="mt-8 p-5 bg-muted/50 rounded-xl border border-border">
-          <h3 className="font-bold text-sm mb-4 tracking-wider text-muted-foreground">THE PURSE 💰</h3>
+        <div className="mt-8 p-5 bg-background rounded-2xl border border-border shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold tracking-widest text-muted-foreground uppercase">The Purse</h3>
+            <span className="text-base">💰</span>
+          </div>
           
           <div className="space-y-4">
             <div>
-              <div className="text-xs text-muted-foreground font-medium">TOTAL BUDGET</div>
-              <div className="text-xl font-black">₹{budget.totalBudget.toLocaleString()}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Total Budget</div>
+              <div className="text-2xl font-black tracking-tight text-foreground">₹{budget.totalBudget.toLocaleString()}</div>
             </div>
             
-            <div className="space-y-2 border-t border-border pt-3">
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Transport ✈️</span>
-                <span className="text-foreground">₹{budget.spentTransport.toLocaleString()}</span>
+            <div className="space-y-2.5 border-t border-border/60 pt-3">
+              <div className="flex justify-between items-center text-xs font-medium">
+                <span className="text-muted-foreground flex items-center gap-1.5">✈️ <span className="mt-0.5">Transport</span></span>
+                <span className="text-foreground font-semibold">₹{budget.spentTransport.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Places 🏛️</span>
-                <span className="text-foreground">₹{budget.spentPlaces.toLocaleString()}</span>
+              <div className="flex justify-between items-center text-xs font-medium">
+                <span className="text-muted-foreground flex items-center gap-1.5">🏛️ <span className="mt-0.5">Places</span></span>
+                <span className="text-foreground font-semibold">₹{budget.spentPlaces.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Hotels 🏨</span>
-                <span className="text-foreground">₹{budget.spentHotels.toLocaleString()}</span>
+              <div className="flex justify-between items-center text-xs font-medium">
+                <span className="text-muted-foreground flex items-center gap-1.5">🏨 <span className="mt-0.5">Hotels</span></span>
+                <span className="text-foreground font-semibold">₹{budget.spentHotels.toLocaleString()}</span>
               </div>
             </div>
 
-            <div className="border-t border-border pt-3">
-              <div className="text-xs text-muted-foreground font-medium">REMAINING</div>
-              <div className={`text-xl font-black ${budget.remaining < 0 ? 'text-red-500' : 'text-green-600'}`}>
+            <div className="border-t border-border/60 pt-3">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Remaining</div>
+              <div className={`text-xl font-black tracking-tight ${budget.remaining < 0 ? 'text-red-500' : 'text-green-600'}`}>
                 ₹{budget.remaining.toLocaleString()}
               </div>
             </div>

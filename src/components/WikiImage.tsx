@@ -29,7 +29,7 @@ export default function WikiImage({
           return;
         }
       } catch (err) {
-        console.error("Failed to fetch image for", placeName);
+        // Silently use fallback if API is unavailable
       }
       
       // Fallback if no image is found

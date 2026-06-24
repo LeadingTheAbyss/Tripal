@@ -16,6 +16,7 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -25,6 +26,18 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+// --- DROPPABLE LIST COMPONENT ---
+function DroppableList({ id, items, children, className }: { id: string, items: string[], children: React.ReactNode, className?: string }) {
+  const { setNodeRef } = useDroppable({ id });
+  return (
+    <SortableContext id={id} items={items} strategy={verticalListSortingStrategy}>
+      <div ref={setNodeRef} className={className}>
+        {children}
+      </div>
+    </SortableContext>
+  );
+}
 
 // --- SORTABLE CARD COMPONENT ---
 function SortablePlaceCard({ place, isOverlay = false }: { place: Place, isOverlay?: boolean }) {
@@ -67,12 +80,20 @@ export default function ItineraryPage() {
 
   // Initialize days on mount
   useEffect(() => {
-    if (itinerary.days.length === 0 && trip.startDate) {
-      const start = new Date(trip.startDate);
-      const end = trip.endDate ? new Date(trip.endDate) : new Date();
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 3;
-      itinerary.initializeDays(nights, trip.startDate);
+    if (itinerary.days.length === 0) {
+      const startDateStr = trip.startDate || new Date().toISOString().split('T')[0];
+      const start = new Date(startDateStr);
+      
+      let nights = 3; // Default 3 days if no end date
+      if (trip.startDate && trip.endDate) {
+        const end = new Date(trip.endDate);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
+      
+      if (nights === 0) nights = 1; // Ensure at least 1 day
+
+      itinerary.initializeDays(nights, startDateStr);
     }
   }, [trip.startDate, trip.endDate, itinerary.days.length]);
 
@@ -109,8 +130,17 @@ export default function ItineraryPage() {
     const sourceDay = findContainerDay(activeId);
     const destDay = findContainerDay(overId);
 
+    let newIndex: number | undefined;
+    if (destDay !== 0 && overId !== destDay.toString() && overId !== 'unassigned') {
+      const destDayObj = itinerary.days.find(d => d.dayNumber === destDay);
+      if (destDayObj) {
+        newIndex = destDayObj.placeIds.indexOf(overId);
+        if (newIndex === -1) newIndex = undefined;
+      }
+    }
+
     if (sourceDay !== destDay) {
-      itinerary.movePlaceBetweenDays(activeId, sourceDay, destDay);
+      itinerary.movePlaceBetweenDays(activeId, sourceDay, destDay, newIndex);
       if (sourceDay !== 0) itinerary.recalcDay(sourceDay);
       if (destDay !== 0) itinerary.recalcDay(destDay);
     } else {
@@ -118,9 +148,8 @@ export default function ItineraryPage() {
       if (sourceDay !== 0 && activeId !== overId) {
         const day = itinerary.days.find(d => d.dayNumber === sourceDay);
         if (day) {
-          const oldIndex = day.placeIds.indexOf(activeId);
-          const newIndex = day.placeIds.indexOf(overId);
-          itinerary.movePlaceBetweenDays(activeId, sourceDay, destDay, newIndex);
+          const newIdx = day.placeIds.indexOf(overId);
+          itinerary.movePlaceBetweenDays(activeId, sourceDay, destDay, newIdx);
         }
       }
     }
@@ -147,16 +176,14 @@ export default function ItineraryPage() {
           <div className="w-80 flex flex-col bg-zinc-100 rounded-2xl border-2 border-dashed border-zinc-300 p-4 shrink-0">
             <h3 className="font-bold text-zinc-600 mb-4 px-2">Unscheduled Bag ({unassignedPlaces.length})</h3>
             
-            <SortableContext id="unassigned" items={unassignedPlaces.map(p => p.id)} strategy={verticalListSortingStrategy}>
-              <div className="flex-1 space-y-3 overflow-y-auto px-2 pb-4">
-                {unassignedPlaces.map(place => (
-                  <SortablePlaceCard key={place.id} place={place} />
-                ))}
-                {unassignedPlaces.length === 0 && (
-                  <div className="text-sm text-zinc-400 text-center mt-10">All places assigned!</div>
-                )}
-              </div>
-            </SortableContext>
+            <DroppableList id="unassigned" items={unassignedPlaces.map(p => p.id)} className="flex-1 space-y-3 overflow-y-auto px-2 pb-4">
+              {unassignedPlaces.map(place => (
+                <SortablePlaceCard key={place.id} place={place} />
+              ))}
+              {unassignedPlaces.length === 0 && (
+                <div className="text-sm text-zinc-400 text-center mt-10">All places assigned!</div>
+              )}
+            </DroppableList>
           </div>
 
           {/* Day Columns */}
@@ -187,18 +214,16 @@ export default function ItineraryPage() {
                     )}
                   </div>
 
-                  <SortableContext id={day.dayNumber.toString()} items={day.placeIds} strategy={verticalListSortingStrategy}>
-                    <div className="flex-1 p-4 space-y-3 overflow-y-auto bg-zinc-50/50 min-h-[300px]">
-                      {dayPlaces.map(place => (
-                        <SortablePlaceCard key={place.id} place={place} />
-                      ))}
-                      {dayPlaces.length === 0 && (
-                        <div className="text-xs text-zinc-400 font-medium text-center border-2 border-dashed border-zinc-200 rounded-xl p-8 h-full flex items-center justify-center">
-                          Drop places here
-                        </div>
-                      )}
-                    </div>
-                  </SortableContext>
+                  <DroppableList id={day.dayNumber.toString()} items={day.placeIds} className="flex-1 p-4 space-y-3 overflow-y-auto bg-zinc-50/50 min-h-[300px]">
+                    {dayPlaces.map(place => (
+                      <SortablePlaceCard key={place.id} place={place} />
+                    ))}
+                    {dayPlaces.length === 0 && (
+                      <div className="text-xs text-zinc-400 font-medium text-center border-2 border-dashed border-zinc-200 rounded-xl p-8 h-full flex items-center justify-center">
+                        Drop places here
+                      </div>
+                    )}
+                  </DroppableList>
                 </div>
               );
             })}
