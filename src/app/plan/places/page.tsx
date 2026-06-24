@@ -152,6 +152,7 @@ export default function PlacesPage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedModalPlace, setSelectedModalPlace] = useState<Place | null>(null);
+  const [sortBy, setSortBy] = useState<'top_rated' | 'cheapest' | 'shortest_visit'>('top_rated');
 
   useEffect(() => {
     const fetchPlaces = async () => {
@@ -177,7 +178,7 @@ export default function PlacesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 pt-10 px-4 text-white">
+    <div className="min-h-screen bg-background pt-10 px-4 text-foreground transition-colors duration-300">
       <div className="max-w-5xl mx-auto space-y-10 pb-24">
         <div className="flex justify-between items-end">
           <div>
@@ -187,6 +188,27 @@ export default function PlacesPage() {
           <div className="text-sm font-medium bg-blue-900/50 text-blue-300 px-4 py-2 rounded-full border border-blue-800">
             {itinerary.selectedPlaces.length} Places Selected
           </div>
+        </div>
+
+        <div className="flex gap-2 text-sm mt-6">
+          <button 
+            onClick={() => setSortBy('top_rated')}
+            className={`${sortBy === 'top_rated' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'} font-medium px-4 py-2 rounded-lg border transition-colors`}
+          >
+            Top Rated
+          </button>
+          <button 
+            onClick={() => setSortBy('cheapest')}
+            className={`${sortBy === 'cheapest' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'} font-medium px-4 py-2 rounded-lg border transition-colors`}
+          >
+            Cheapest First
+          </button>
+          <button 
+            onClick={() => setSortBy('shortest_visit')}
+            className={`${sortBy === 'shortest_visit' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'} font-medium px-4 py-2 rounded-lg border transition-colors`}
+          >
+            Shortest Visit
+          </button>
         </div>
 
         {loading ? (
@@ -199,12 +221,23 @@ export default function PlacesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {places.map((place) => {
+            {(() => {
+              let sortedPlaces = [...places];
+              if (sortBy === 'cheapest') {
+                sortedPlaces.sort((a, b) => a.entryFee - b.entryFee);
+              } else if (sortBy === 'shortest_visit') {
+                sortedPlaces.sort((a, b) => a.visitDurationHours - b.visitDurationHours);
+              } else {
+                sortedPlaces.sort((a, b) => (b.rating || 4.5) - (a.rating || 4.5));
+              }
+
+              return sortedPlaces.map((place) => {
               const isSelected = itinerary.selectedPlaces.some(p => p.id === place.id);
 
               return (
                 <div 
                   key={place.id}
+                  onClick={() => setSelectedModalPlace(place)}
                   className={`
                     relative flex flex-col rounded-3xl border-2 transition-all cursor-pointer overflow-hidden group
                     ${isSelected 
@@ -282,7 +315,7 @@ export default function PlacesPage() {
                   </div>
                 </div>
               );
-            })}
+            })})()}
           </div>
         )}
 

@@ -15,6 +15,7 @@ export default function HotelsPage() {
   
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'best' | 'closest' | 'budget'>('best');
 
   // Calculate nights
   const calculateNights = () => {
@@ -79,19 +80,38 @@ export default function HotelsPage() {
       ) : (
         <div className="space-y-6">
           <div className="flex gap-2 text-sm">
-            <button className="bg-blue-900/50 text-blue-300 font-medium px-4 py-2 rounded-lg border border-blue-800">
+            <button 
+              onClick={() => setSortBy('best')}
+              className={`${sortBy === 'best' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'} font-medium px-4 py-2 rounded-lg border transition-colors`}
+            >
               Best Overall
             </button>
-            <button className="bg-zinc-900 text-zinc-400 font-medium px-4 py-2 rounded-lg border border-zinc-800 hover:bg-zinc-800 transition-colors">
+            <button 
+              onClick={() => setSortBy('closest')}
+              className={`${sortBy === 'closest' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'} font-medium px-4 py-2 rounded-lg border transition-colors`}
+            >
               Closest to Places
             </button>
-            <button className="bg-zinc-900 text-zinc-400 font-medium px-4 py-2 rounded-lg border border-zinc-800 hover:bg-zinc-800 transition-colors">
+            <button 
+              onClick={() => setSortBy('budget')}
+              className={`${sortBy === 'budget' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'} font-medium px-4 py-2 rounded-lg border transition-colors`}
+            >
               Budget
             </button>
           </div>
 
           <div className="space-y-4">
-            {hotels.map((hotel) => {
+            {(() => {
+              let sortedHotels = [...hotels];
+              if (sortBy === 'closest') {
+                sortedHotels.sort((a, b) => a.distanceToCluster - b.distanceToCluster);
+              } else if (sortBy === 'budget') {
+                sortedHotels.sort((a, b) => a.pricePerNight - b.pricePerNight);
+              } else {
+                sortedHotels.sort((a, b) => b.rating - a.rating);
+              }
+
+              return sortedHotels.map((hotel) => {
               const isSelected = trip.selectedHotel?.id === hotel.id;
               const totalCost = hotel.pricePerNight * nights;
               const remainingAfter = budget.remaining + (isSelected ? 0 : (trip.selectedHotel ? (trip.selectedHotel.pricePerNight * nights) : 0)) - totalCost;
@@ -153,7 +173,7 @@ export default function HotelsPage() {
                   </div>
                 </div>
               );
-            })}
+            })})()}
           </div>
         </div>
       )}

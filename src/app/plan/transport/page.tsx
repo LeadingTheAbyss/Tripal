@@ -7,6 +7,7 @@ import { TransportOption, Passenger } from '@/types/trip';
 import { api } from '@/lib/api';
 import { Plane, Train, Bus, Car, ArrowRight, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function TransportPage() {
   const router = useRouter();
@@ -72,18 +73,38 @@ export default function TransportPage() {
     return h * 60 + m;
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-950 pt-10 px-4">
-      <div className="max-w-4xl mx-auto space-y-12 pb-24 text-white">
-        <div className="flex justify-between items-end">
+    <div className="min-h-screen bg-background pt-10 px-4 transition-colors duration-300">
+      <div className="max-w-4xl mx-auto space-y-12 pb-24 text-foreground">
+        
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-between items-end"
+        >
           <div>
             <h1 className="text-3xl font-bold mb-2">Transport Options</h1>
-            <p className="text-zinc-400">Select how everyone is getting to {trip.destination || 'the destination'}.</p>
+            <p className="text-muted-foreground">Select how everyone is getting to <span className="font-semibold text-foreground">{trip.destination || 'the destination'}</span>.</p>
           </div>
           <div className="flex flex-col gap-1 text-right">
-            <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Sort Options</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sort Options</label>
             <select 
-              className="p-2 border border-zinc-800 rounded-lg bg-zinc-900 outline-none focus:border-blue-500 text-sm font-medium text-white cursor-pointer shadow-sm"
+              className="p-2 border border-border rounded-lg bg-card outline-none focus:border-primary text-sm font-medium text-foreground cursor-pointer shadow-sm transition-colors"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
             >
@@ -93,130 +114,164 @@ export default function TransportPage() {
               <option value="earliest">Earliest Departure</option>
             </select>
           </div>
-        </div>
+        </motion.div>
 
-        {loading ? (
-          <div className="p-12 text-center text-zinc-500 animate-pulse">
-            Searching routes across multiple APIs...
-          </div>
-        ) : trip.passengers.length === 0 ? (
-          <div className="p-8 border-2 border-dashed border-zinc-800 rounded-xl text-center text-zinc-500">
-            No passengers added yet. Please go back to Setup.
-          </div>
-        ) : (
-          <div className="space-y-10">
-            {trip.passengers.map((pax) => {
-              const rawOptions = transportMap[pax.id] || [];
-              
-              // Sort options based on user preference
-              let options = [...rawOptions];
-              if (sortBy === 'cheapest') {
-                options.sort((a, b) => a.price - b.price);
-              } else if (sortBy === 'fastest') {
-                options.sort((a, b) => parseDuration(a.duration) - parseDuration(b.duration));
-              } else if (sortBy === 'earliest') {
-                options.sort((a, b) => parseTime(a.departure) - parseTime(b.departure));
-              } else {
-                // 'recommended' - already sorted by backend recommendation engine
-                options = [...rawOptions];
-              }
+        {/* Content */}
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div 
+              key="loading"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="p-12 text-center text-muted-foreground animate-pulse"
+            >
+              Searching routes across multiple APIs...
+            </motion.div>
+          ) : trip.passengers.length === 0 ? (
+            <motion.div 
+              key="empty"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="p-8 border-2 border-dashed border-border rounded-xl text-center text-muted-foreground"
+            >
+              No passengers added yet. Please go back to Setup.
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="content"
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+              className="space-y-10"
+            >
+              {trip.passengers.map((pax) => {
+                const rawOptions = transportMap[pax.id] || [];
+                
+                // Sort options based on user preference
+                let options = [...rawOptions];
+                if (sortBy === 'cheapest') {
+                  options.sort((a, b) => a.price - b.price);
+                } else if (sortBy === 'fastest') {
+                  options.sort((a, b) => parseDuration(a.duration) - parseDuration(b.duration));
+                } else if (sortBy === 'earliest') {
+                  options.sort((a, b) => parseTime(a.departure) - parseTime(b.departure));
+                } else {
+                  // 'recommended'
+                  options = [...rawOptions];
+                }
 
-              const selectedTransportId = trip.selectedTransports.find(t => t.passengerId === pax.id)?.transportOptionId;
+                const selectedTransportId = trip.selectedTransports.find(t => t.passengerId === pax.id)?.transportOptionId;
 
-              return (
-                <section key={pax.id} className="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 shadow-xl">
-                  <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{pax.name}</h3>
-                      <p className="text-sm text-zinc-400">
-                        {pax.city || 'Unknown Origin'} → {trip.destination}
-                      </p>
+                return (
+                  <motion.section 
+                    variants={itemVariants}
+                    key={pax.id} 
+                    className="bg-card p-6 rounded-2xl border border-border shadow-lg transition-colors"
+                  >
+                    <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-foreground">{pax.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {pax.city || 'Unknown Origin'} → {trip.destination}
+                        </p>
+                      </div>
+                      {pax.transportPreference && pax.transportPreference !== 'any' && (
+                        <div className="text-sm font-medium bg-muted text-muted-foreground px-3 py-1 rounded-full border border-border">
+                          Prefers: {pax.transportPreference}
+                        </div>
+                      )}
                     </div>
-                    {pax.transportPreference && pax.transportPreference !== 'any' && (
-                      <div className="text-sm font-medium bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-700">
-                        Prefers: {pax.transportPreference}
+
+                    {options.length === 0 ? (
+                      <div className="text-muted-foreground text-sm flex items-center gap-2">
+                        <AlertCircle size={16} /> No transport options found for this route.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <AnimatePresence>
+                          {options.map((opt, idx) => {
+                            const isSelected = selectedTransportId === opt.id;
+                            const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
+
+                            return (
+                              <motion.div 
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                key={opt.id}
+                                onClick={() => handleSelectTransport(pax.id, opt)}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                className={`
+                                  relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-colors
+                                  ${isSelected 
+                                    ? 'border-primary bg-primary/10 shadow-sm' 
+                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                  }
+                                `}
+                              >
+                                <div className="flex items-center gap-4">
+                                  {isSelected ? (
+                                    <CheckCircle2 className="text-primary" />
+                                  ) : (
+                                    <Circle className="text-muted-foreground/50" />
+                                  )}
+                                  
+                                  <div className="p-3 bg-background rounded-lg shadow-sm border border-border">
+                                    {getTransportIcon(opt.type)}
+                                  </div>
+
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold uppercase tracking-wider text-sm">{opt.provider || opt.type}</span>
+                                      {isRecommended && (
+                                        <span className="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 border border-yellow-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                          ★ RECOMMENDED
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground mt-1">
+                                      {opt.departure} <ArrowRight className="inline mx-1" size={14}/> {opt.arrival} ({opt.duration})
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="text-right">
+                                  <div className="text-xl font-bold text-foreground">₹{opt.price.toLocaleString()}</div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
                       </div>
                     )}
-                  </div>
-
-                  {options.length === 0 ? (
-                    <div className="text-zinc-500 text-sm flex items-center gap-2">
-                      <AlertCircle size={16} /> No transport options found for this route.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {options.map((opt) => {
-                        const isSelected = selectedTransportId === opt.id;
-                        // Only show recommended badge if we are in recommended sort mode
-                        const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
-
-                        return (
-                          <div 
-                            key={opt.id}
-                            onClick={() => handleSelectTransport(pax.id, opt)}
-                            className={`
-                              relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all
-                              ${isSelected 
-                                ? 'border-blue-500 bg-blue-900/20 shadow-sm' 
-                                : 'border-zinc-800 hover:border-blue-500 hover:bg-zinc-800/50'
-                              }
-                            `}
-                          >
-                            <div className="flex items-center gap-4">
-                              {isSelected ? (
-                                <CheckCircle2 className="text-blue-500" />
-                              ) : (
-                                <Circle className="text-zinc-600" />
-                              )}
-                              
-                              <div className="p-3 bg-zinc-800 rounded-lg shadow-sm border border-zinc-700">
-                                {getTransportIcon(opt.type)}
-                              </div>
-
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold uppercase tracking-wider text-sm">{opt.provider || opt.type}</span>
-                                  {isRecommended && (
-                                    <span className="text-[10px] bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                      ★ RECOMMENDED
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-sm text-zinc-400 mt-1">
-                                  {opt.departure} <ArrowRight className="inline mx-1" size={14}/> {opt.arrival} ({opt.duration})
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="text-right">
-                              <div className="text-xl font-bold text-white">₹{opt.price.toLocaleString()}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-        )}
+                  </motion.section>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* CONTINUATION */}
-        <div className="flex justify-between items-center pt-8 border-t border-zinc-800">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="flex justify-between items-center pt-8 border-t border-border"
+        >
           <button 
             onClick={() => router.push('/plan/setup')}
-            className="text-zinc-400 hover:text-white font-medium"
+            className="text-muted-foreground hover:text-foreground font-medium transition-colors"
           >
             ← Back to Setup
           </button>
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/plan/places')}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-transform hover:-translate-y-1"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"
           >
             Discover Places <ArrowRight size={20} />
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </div>
     </div>
   );
