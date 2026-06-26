@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useTripStore } from '@/store/tripStore';
 import { useItineraryStore } from '@/store/itineraryStore';
 import { Place } from '@/types/trip';
-import { ArrowRight, Clock, AlertTriangle, GripVertical } from 'lucide-react';
+import { ArrowRight, Clock, AlertTriangle, GripVertical, Wand2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   DndContext,
@@ -54,7 +54,7 @@ function SortablePlaceCard({ place, isOverlay = false }: { place: Place, isOverl
       ref={setNodeRef}
       style={style}
       className={`relative group bg-card/80 backdrop-blur-sm border rounded-xl p-4 flex items-center gap-4 transition-all duration-200 
-        ${isOverlay ? 'shadow-2xl shadow-primary/20 border-primary/50 rotate-2 scale-105 z-50 bg-card' : 'border-border hover:border-primary/50 hover:bg-card hover:shadow-lg hover:shadow-primary/5'}
+        ${isOverlay ? 'shadow-2xl shadow-primary/20 border-primary/50 scale-105 z-50 bg-card' : 'border-border hover:border-primary/50 hover:bg-card hover:shadow-lg hover:shadow-primary/5'}
       `}
     >
       <div {...attributes} {...listeners} className="cursor-grab text-muted-foreground group-hover:text-primary active:cursor-grabbing p-1 -ml-2 rounded-md hover:bg-primary/10 transition-colors">
@@ -68,6 +68,7 @@ function SortablePlaceCard({ place, isOverlay = false }: { place: Place, isOverl
           <span className="flex items-center gap-1.5"><Clock size={11} className="text-muted-foreground/70"/> {place.visitDurationHours + place.travelTimeHours} hrs total</span>
         </div>
       </div>
+      {/* Quick Quick action dots could go here, but Dnd-Kit handles the whole item. */}
     </div>
   );
 }
@@ -215,11 +216,23 @@ export default function ItineraryPage() {
           
           {/* Unassigned Places (Bag) */}
           <div className="w-80 flex flex-col bg-card/40 backdrop-blur-xl rounded-3xl border border-border/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] shrink-0 overflow-hidden">
-            <div className="px-6 py-5 border-b border-border/50 bg-card/60 backdrop-blur-md">
-              <h3 className="font-bold text-foreground flex items-center gap-2">
-                Available Places
-                <span className="bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full font-bold">{unassignedPlaces.length}</span>
-              </h3>
+            <div className="px-5 py-5 border-b border-border/50 bg-card/60 backdrop-blur-md flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-foreground flex items-center gap-2">
+                  Available
+                  <span className="bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full font-bold">{unassignedPlaces.length}</span>
+                </h3>
+              </div>
+              
+              {unassignedPlaces.length > 0 && (
+                <button
+                  onClick={() => itinerary.autoSchedule()}
+                  className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-bold py-2.5 rounded-xl transition-all border border-primary/20 shadow-sm hover:shadow-primary/10 hover:-translate-y-0.5"
+                >
+                  <Wand2 size={16} />
+                  Auto-Schedule
+                </button>
+              )}
             </div>
             
             <DroppableList id="unassigned" items={unassignedPlaces.map(p => p.id)} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -238,13 +251,13 @@ export default function ItineraryPage() {
           </div>
 
           {/* Day Columns */}
-          <div className="flex-1 overflow-x-auto flex gap-5 pb-4 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 px-2">
+          <div className="flex-1 overflow-y-auto flex flex-col gap-6 pb-4 pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30">
             {itinerary.days.map((day) => {
               const dayPlaces = day.placeIds.map(id => itinerary.selectedPlaces.find(p => p.id === id)).filter(Boolean) as Place[];
               const isOverloaded = day.totalTimeHours > 8;
 
               return (
-                <div key={day.dayNumber} className="w-80 shrink-0 flex flex-col bg-card/40 backdrop-blur-xl rounded-3xl border border-border/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] overflow-hidden transition-colors duration-300">
+                <div key={day.dayNumber} className="w-full shrink-0 flex flex-col bg-card/40 backdrop-blur-xl rounded-3xl border border-border/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] overflow-hidden transition-colors duration-300">
                   <div className={`p-5 border-b border-border/50 transition-colors ${isOverloaded ? 'bg-red-500/5' : 'bg-card/60 backdrop-blur-md'}`}>
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-bold text-lg tracking-tight">Day {day.dayNumber}</h3>
@@ -265,7 +278,7 @@ export default function ItineraryPage() {
                     )}
                   </div>
 
-                  <DroppableList id={day.dayNumber.toString()} items={day.placeIds} className="flex-1 p-4 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] min-h-[300px]">
+                  <DroppableList id={day.dayNumber.toString()} items={day.placeIds} className="flex-1 p-4 space-y-3 bg-card/20 min-h-[150px]">
                     {dayPlaces.map(place => (
                       <SortablePlaceCard key={place.id} place={place} />
                     ))}
