@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Place, ItineraryDay } from '../types/trip';
 
 interface ItineraryState {
@@ -17,7 +18,9 @@ interface ItineraryState {
   recalcDay: (dayNumber: number) => void;
 }
 
-export const useItineraryStore = create<ItineraryState>((set, get) => ({
+export const useItineraryStore = create<ItineraryState>()(
+  persist(
+    (set, get) => ({
   days: [],
   selectedPlaces: [],
 
@@ -121,4 +124,8 @@ export const useItineraryStore = create<ItineraryState>((set, get) => ({
 
     return { days: newDays };
   })
-}));
+  }),
+  {
+    name: 'itinerary-store', // name of the item in the storage (must be unique)
+  }
+));

@@ -22,9 +22,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-border bg-card p-6 flex flex-col justify-between shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)] z-10">
+      <aside className="w-64 border-r border-border bg-card p-6 flex flex-col justify-between shrink-0 overflow-y-auto shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)] z-10">
         <div>
           <Link href="/" className="block cursor-pointer hover:opacity-80 transition-opacity">
             <h1 className="text-2xl font-black mb-8 tracking-tight text-foreground">Ghumi-<span className="text-primary">Ghumi</span> <span className="text-xl">✈️</span></h1>

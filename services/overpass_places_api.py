@@ -51,7 +51,7 @@ def fetch_overpass_places(city_name: str) -> List[Place]:
         }
         response = requests.post(endpoint, data={"data": query}, headers=headers, timeout=15)
         
-        with open("overpass_debug.log", "w") as f:
+        with open("overpass_debug.log", "w", encoding="utf-8") as f:
             f.write(f"Lat: {lat}, Lon: {lon}\n")
             f.write(f"Query: {query}\n")
             f.write(f"Response status: {response.status_code}\n")
@@ -104,12 +104,12 @@ def fetch_overpass_places(city_name: str) -> List[Place]:
                 bad_weather_types=[Weather.RAINY]
             ))
             
-        with open("overpass_debug.log", "a") as f:
+        with open("overpass_debug.log", "a", encoding="utf-8") as f:
             f.write(f"Places parsed: {len(places)}\n")
             
         return places
     except Exception as e:
-        with open("overpass_debug.log", "a") as f:
+        with open("overpass_debug.log", "a", encoding="utf-8") as f:
             f.write(f"Exception: {e}\n")
         print(f"Overpass API Error: {e}")
         return []

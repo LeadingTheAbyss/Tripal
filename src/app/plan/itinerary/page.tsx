@@ -117,15 +117,15 @@ export default function ItineraryPage() {
     if (place) setActivePlace(place);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActivePlace(null);
+  const handleDragOver = (event: any) => {
     const { active, over } = event;
     if (!over) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Find source and destination containers
+    if (activeId === overId) return;
+
     const findContainerDay = (id: string) => {
       if (id === 'unassigned') return 0;
       const day = itinerary.days.find(d => d.dayNumber.toString() === id || d.placeIds.includes(id));
@@ -135,27 +135,58 @@ export default function ItineraryPage() {
     const sourceDay = findContainerDay(activeId);
     const destDay = findContainerDay(overId);
 
-    let newIndex: number | undefined;
-    if (destDay !== 0 && overId !== destDay.toString() && overId !== 'unassigned') {
-      const destDayObj = itinerary.days.find(d => d.dayNumber === destDay);
-      if (destDayObj) {
-        newIndex = destDayObj.placeIds.indexOf(overId);
-        if (newIndex === -1) newIndex = undefined;
-      }
-    }
-
     if (sourceDay !== destDay) {
+      let newIndex: number | undefined;
+      if (destDay !== 0 && overId !== destDay.toString() && overId !== 'unassigned') {
+        const destDayObj = itinerary.days.find(d => d.dayNumber === destDay);
+        if (destDayObj) {
+          newIndex = destDayObj.placeIds.indexOf(overId);
+          if (newIndex === -1) newIndex = undefined;
+        }
+      }
+
       itinerary.movePlaceBetweenDays(activeId, sourceDay, destDay, newIndex);
       if (sourceDay !== 0) itinerary.recalcDay(sourceDay);
       if (destDay !== 0) itinerary.recalcDay(destDay);
-    } else {
-      // Reordering within same day (basic swap logic for MVP)
-      if (sourceDay !== 0 && activeId !== overId) {
-        const day = itinerary.days.find(d => d.dayNumber === sourceDay);
-        if (day) {
-          const newIdx = day.placeIds.indexOf(overId);
-          itinerary.movePlaceBetweenDays(activeId, sourceDay, destDay, newIdx);
-        }
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActivePlace(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const findContainerDay = (id: string) => {
+      if (id === 'unassigned') return 0;
+      const day = itinerary.days.find(d => d.dayNumber.toString() === id || d.placeIds.includes(id));
+      return day ? day.dayNumber : 0;
+    };
+
+    const sourceDay = findContainerDay(activeId);
+    const destDay = findContainerDay(overId);
+
+    if (sourceDay === destDay && sourceDay !== 0 && activeId !== overId) {
+      const day = itinerary.days.find(d => d.dayNumber === sourceDay);
+      if (day) {
+        const oldIndex = day.placeIds.indexOf(activeId);
+        const newIndex = day.placeIds.indexOf(overId);
+        
+        // Use arrayMove to reorder within the same list
+        const newPlaceIds = arrayMove(day.placeIds, oldIndex, newIndex);
+        
+        // Update store with new order
+        // We can just update the day directly since we're in the component
+        useItineraryStore.setState(state => {
+          const newDays = [...state.days];
+          const dayIdx = newDays.findIndex(d => d.dayNumber === sourceDay);
+          if (dayIdx >= 0) {
+            newDays[dayIdx] = { ...newDays[dayIdx], placeIds: newPlaceIds };
+          }
+          return { days: newDays };
+        });
       }
     }
   };
@@ -175,6 +206,7 @@ export default function ItineraryPage() {
         sensors={sensors} 
         collisionDetection={closestCorners} 
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="flex gap-8 flex-1 overflow-hidden">

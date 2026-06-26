@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { BudgetState } from '../types/budget';
 
 interface BudgetStoreState extends BudgetState {
@@ -9,7 +10,9 @@ interface BudgetStoreState extends BudgetState {
   recalcBudget: () => void;
 }
 
-export const useBudgetStore = create<BudgetStoreState>((set, get) => ({
+export const useBudgetStore = create<BudgetStoreState>()(
+  persist(
+    (set, get) => ({
   totalBudget: 0,
   spentTransport: 0,
   spentPlaces: 0,
@@ -54,4 +57,8 @@ export const useBudgetStore = create<BudgetStoreState>((set, get) => ({
       remaining
     };
   })
-}));
+  }),
+  {
+    name: 'budget-store', // name of the item in the storage (must be unique)
+  }
+));
