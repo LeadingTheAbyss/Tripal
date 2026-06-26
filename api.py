@@ -22,6 +22,16 @@ app.add_middleware(
 def get_pincode(pincode: str):
     return geo_lookup(pincode)
 
+@app.get("/api/test-import")
+def test_import():
+    from services.live_places_api import search_live_places
+    import traceback
+    try:
+        res = search_live_places("New Delhi")
+        return {"count": len(res), "places": [p.name for p in res]}
+    except Exception as e:
+        return {"error": str(e), "trace": traceback.format_exc()}
+
 @app.get("/api/transport")
 def get_transport(source: str, destination: str):
     # Dummy passenger to satisfy backend requirements

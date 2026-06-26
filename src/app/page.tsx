@@ -560,7 +560,7 @@ export default function LandingPage() {
         </div>
         
         <div className="section right">
-          <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/10 p-8 md:p-12 rounded-3xl border border-white/20 shadow-2xl">
+          <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
             <h2>It starts with a destination...</h2>
           </div>
         </div>
@@ -569,30 +569,30 @@ export default function LandingPage() {
           <div className="parallax ground"></div>
 
           <div className="section">
-            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/10 p-8 md:p-12 rounded-3xl border border-white/20 shadow-2xl text-left">
+            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl text-left">
               <h2>..but quickly becomes complex.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#8b8cf8] to-[#f2a2d9] bg-clip-text text-transparent font-bold mt-2">Hotels, budgets, schedules!?</p>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Hotels, budgets, schedules!?</p>
             </div>
           </div>
 
           <div className="section right">
-            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/10 p-8 md:p-12 rounded-3xl border border-white/20 shadow-2xl">
+            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
               <h2>And a million open tabs.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#8b8cf8] to-[#f2a2d9] bg-clip-text text-transparent font-bold mt-2">Flights, trains, hotels everywhere.</p>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Flights, trains, hotels everywhere.</p>
             </div>
           </div>
 
           <div className="section">
-            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/10 p-8 md:p-12 rounded-3xl border border-white/20 shadow-2xl text-left">
+            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl text-left">
               <h2>We handle the logistics.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#8b8cf8] to-[#f2a2d9] bg-clip-text text-transparent font-bold mt-2">For realsies!</p>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">For realsies!</p>
             </div>
           </div>
           
           <div className="section right">
-            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/10 p-8 md:p-12 rounded-3xl border border-white/20 shadow-2xl">
+            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
               <h2>Defying all known planning stress.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#8b8cf8] to-[#f2a2d9] bg-clip-text text-transparent font-bold mt-2">It's actual magic!</p>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">It's actual magic!</p>
             </div>
           </div>
           <div className="parallax clouds"></div>
@@ -607,7 +607,7 @@ export default function LandingPage() {
           {/* Padding sections to perfectly map the 3x duration final animation */}
           <div className="section"></div>
           <div className="section"></div>
-          <div className="section end flex flex-col items-center justify-center pt-32">
+          <div className="section end flex flex-col items-center justify-center pt-32 text-white">
             <h2 className="mb-12">Let's go.</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl mx-auto px-8 relative z-10">

@@ -39,11 +39,13 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
     onChange(val); // Keep parent state updated
 
     if (val.length >= 1) {
-      const filtered = INDIAN_CITIES.filter(city => 
-        city.toLowerCase().startsWith(val.toLowerCase())
-      )
-      .sort((a, b) => a.localeCompare(b)) // Alphabetical sort
-      .slice(0, 8); // Top 8 matches
+      const filtered = INDIAN_CITIES
+        .map(city => city.name)
+        .filter(cityName => 
+          cityName.toLowerCase().startsWith(val.toLowerCase())
+        )
+        .sort((a, b) => a.localeCompare(b)) // Alphabetical sort
+        .slice(0, 8); // Top 8 matches
       
       setResults(filtered);
       setIsOpen(true);

@@ -26,7 +26,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar Navigation */}
       <aside className="w-64 border-r border-border bg-card p-6 flex flex-col justify-between shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)] z-10">
         <div>
-          <h1 className="text-2xl font-black mb-8 tracking-tight text-foreground">Ghumi-<span className="text-primary">Ghumi</span> <span className="text-xl">✈️</span></h1>
+          <Link href="/" className="block cursor-pointer hover:opacity-80 transition-opacity">
+            <h1 className="text-2xl font-black mb-8 tracking-tight text-foreground">Ghumi-<span className="text-primary">Ghumi</span> <span className="text-xl">✈️</span></h1>
+          </Link>
           <nav className="space-y-1.5">
             {navLinks.map(link => (
               <Link 

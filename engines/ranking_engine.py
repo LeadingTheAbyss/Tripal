@@ -46,11 +46,16 @@ def rank_transport(source: str, dest: str, date: datetime, passengers: List[Pass
     transports.sort(key=transport_score, reverse=True)
     return transports
 
+from services.overpass_places_api import fetch_overpass_places
+
 def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
     places = search_live_places(city)
     if not places:
         # Fallback if Live API fails or is empty
-        places = MOCK_PLACES_DB.get(city, [])
+        print("[Fallback] TripAdvisor API returned no places. Using Overpass API.")
+        places = fetch_overpass_places(city)
+        if not places:
+            places = MOCK_PLACES_DB.get(city, [])
     
     scored_places = []
     

@@ -139,7 +139,7 @@
 
 :root {
   --landing-padding: 10vmin;
-  --color-landing-bg: #09090b;
+  --color-landing-bg: #dfddd5;
   
   --font-size-large: 8vw;
   --font-size-medium: 4vw;
@@ -163,7 +163,7 @@
 }
 
 .landing-body a {
-  color: white;
+  color: inherit;
 }
 
 .landing-body ul {
@@ -185,7 +185,7 @@
   font-weight: 400;
   font-size: var(--font-size-normal);
   overflow-x: hidden;
-  color: white;
+  color: #151515;
 }
 
 .landing-body canvas {
