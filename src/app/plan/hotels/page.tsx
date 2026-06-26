@@ -58,23 +58,23 @@ export default function HotelsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 pt-10 px-4 text-white">
+    <div className="min-h-screen bg-background pt-10 px-4 text-foreground transition-colors duration-300">
       <div className="max-w-4xl mx-auto space-y-12 pb-24">
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-bold mb-2">Hotel Selection</h1>
-            <p className="text-zinc-400">
+            <p className="text-muted-foreground">
               Where will you stay for {nights} nights in {trip.destination || 'the destination'}?
             </p>
           </div>
         </div>
 
       {loading ? (
-        <div className="p-12 text-center text-zinc-500 animate-pulse">
+        <div className="p-12 text-center text-muted-foreground animate-pulse">
           Clustering places and finding best hotels...
         </div>
       ) : hotels.length === 0 ? (
-        <div className="p-8 border-2 border-dashed border-zinc-800 rounded-xl text-center text-zinc-500">
+        <div className="p-8 border-2 border-dashed border-border rounded-xl text-center text-muted-foreground">
           No hotels found. Go back to Setup and enter a destination.
         </div>
       ) : (
@@ -123,29 +123,29 @@ export default function HotelsPage() {
                     className={`
                       relative flex items-center justify-between p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 hover:-translate-y-1
                       ${isSelected 
-                        ? 'border-blue-500 bg-blue-900/10 shadow-lg shadow-blue-900/40' 
-                        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700 hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]'
+                        ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' 
+                        : 'border-border bg-card hover:border-primary/50 hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)]'
                       }
                     `}
                   >
                     <div className="flex items-center gap-6">
                       {isSelected ? (
-                        <CheckCircle2 className="text-blue-500 w-8 h-8 shrink-0" />
+                        <CheckCircle2 className="text-primary w-8 h-8 shrink-0" />
                       ) : (
-                        <Circle className="text-zinc-600 w-8 h-8 shrink-0" />
+                        <Circle className="text-muted-foreground/40 w-8 h-8 shrink-0" />
                       )}
 
                       <div>
-                        <h3 className="text-xl font-bold text-white leading-tight mb-1">
-                          {hotel.name} <span className="text-sm font-bold text-zinc-500 ml-2">★ {hotel.rating}</span>
+                        <h3 className="text-xl font-bold text-foreground leading-tight mb-1">
+                          {hotel.name} <span className="text-sm font-bold text-muted-foreground ml-2">★ {hotel.rating}</span>
                         </h3>
                         
                         <div className="flex flex-wrap items-center gap-4 text-sm mt-2">
-                          <span className="flex items-center gap-1.5 text-zinc-400 font-medium">
-                            <MapPin size={16} className="text-zinc-500" /> 
+                          <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
+                            <MapPin size={16} className="text-muted-foreground/70" /> 
                             {hotel.distanceToCluster}km from your places
                           </span>
-                          <span className="flex items-center gap-1.5 text-zinc-400 font-medium">
+                          <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
                             <ShieldCheck size={16} className={hotel.safetyScore >= 8 ? "text-green-500" : "text-yellow-500"} /> 
                             Safety: {hotel.safetyScore}/10
                           </span>
@@ -153,7 +153,7 @@ export default function HotelsPage() {
 
                         {/* Warnings if budget tight */}
                         {remainingAfter < 0 && !isSelected && (
-                          <div className="mt-3 text-xs font-semibold text-red-400 flex items-center gap-1 bg-red-900/30 px-2 py-1 rounded inline-flex">
+                          <div className="mt-3 text-xs font-semibold text-destructive flex items-center gap-1 bg-destructive/10 px-2 py-1 rounded inline-flex">
                             <AlertCircle size={14} /> Exceeds remaining budget by ₹{Math.abs(remainingAfter).toLocaleString()}
                           </div>
                         )}
@@ -161,13 +161,13 @@ export default function HotelsPage() {
                     </div>
 
                     <div className="text-right shrink-0 ml-4">
-                      <div className="text-zinc-400 text-sm mb-1 font-medium">
+                      <div className="text-muted-foreground text-sm mb-1 font-medium">
                         ₹{hotel.pricePerNight.toLocaleString()} / night
                       </div>
-                      <div className="text-2xl font-black text-white">
+                      <div className="text-2xl font-black text-foreground">
                         ₹{totalCost.toLocaleString()}
                       </div>
-                      <div className="text-xs font-bold text-zinc-500 mt-1 uppercase tracking-wider">
+                      <div className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-wider">
                       For {nights} Nights
                     </div>
                   </div>
@@ -179,16 +179,16 @@ export default function HotelsPage() {
       )}
 
       {/* CONTINUATION */}
-      <div className="flex justify-between items-center pt-8 border-t border-zinc-800">
+      <div className="flex justify-between items-center pt-8 border-t border-border">
         <button 
           onClick={() => router.push('/plan/places')}
-          className="text-zinc-400 hover:text-white font-medium transition-colors"
+          className="text-muted-foreground hover:text-foreground font-medium transition-colors"
         >
           ← Back to Places
         </button>
         <button 
           onClick={() => router.push('/plan/itinerary')}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-transform hover:-translate-y-1"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-transform hover:-translate-y-1"
         >
           Build Itinerary <ArrowRight size={20} />
         </button>

@@ -119,30 +119,30 @@ export default function ModernDateRangePicker({ label, startDate, endDate, onCha
 
   return (
     <div className="space-y-2 relative" ref={wrapperRef}>
-      <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-        <CalendarIcon size={16} className="text-blue-500" /> {label}
+      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <CalendarIcon size={16} className="text-primary" /> {label}
       </label>
       
       <div 
-        className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-between cursor-pointer hover:border-blue-500 transition-colors"
+        className="w-full p-3 bg-background border border-input rounded-lg flex items-center justify-between cursor-pointer hover:border-primary transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={startDate ? 'text-white font-medium' : 'text-zinc-600'}>{displayValue}</span>
-        <CalendarIcon size={18} className="text-zinc-500" />
+        <span className={startDate ? 'text-foreground font-medium' : 'text-muted-foreground/50'}>{displayValue}</span>
+        <CalendarIcon size={18} className="text-muted-foreground" />
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-72 mt-2 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl p-4 top-[100%] left-0 transform transition-all animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute z-50 w-72 mt-2 bg-popover/90 backdrop-blur-xl border border-border rounded-2xl shadow-2xl p-4 top-[100%] left-0 transform transition-all animate-in fade-in zoom-in-95 duration-200">
           
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <button onClick={prevMonth} className="p-1.5 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+            <button onClick={prevMonth} className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground">
               <ChevronLeft size={18} />
             </button>
-            <div className="font-semibold text-white">
+            <div className="font-semibold text-foreground">
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </div>
-            <button onClick={nextMonth} className="p-1.5 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+            <button onClick={nextMonth} className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground">
               <ChevronRight size={18} />
             </button>
           </div>
@@ -150,7 +150,7 @@ export default function ModernDateRangePicker({ label, startDate, endDate, onCha
           {/* Days Header */}
           <div className="grid grid-cols-7 gap-1 mb-2 text-center">
             {daysOfWeek.map(day => (
-              <div key={day} className="text-xs font-semibold text-zinc-500">
+              <div key={day} className="text-xs font-semibold text-muted-foreground">
                 {day}
               </div>
             ))}
@@ -177,9 +177,9 @@ export default function ModernDateRangePicker({ label, startDate, endDate, onCha
                 <div 
                   key={day} 
                   className={`relative flex items-center justify-center h-8
-                    ${inRange ? 'bg-blue-600/20' : ''}
-                    ${isStart && endDate ? 'bg-gradient-to-r from-transparent to-blue-600/20' : ''}
-                    ${isEnd ? 'bg-gradient-to-l from-transparent to-blue-600/20' : ''}
+                    ${inRange ? 'bg-primary/20' : ''}
+                    ${isStart && endDate ? 'bg-gradient-to-r from-transparent to-primary/20' : ''}
+                    ${isEnd ? 'bg-gradient-to-l from-transparent to-primary/20' : ''}
                   `}
                   onMouseEnter={() => !disabled && setHoverDate(dateStr)}
                 >
@@ -188,9 +188,9 @@ export default function ModernDateRangePicker({ label, startDate, endDate, onCha
                     onClick={() => handleDateSelect(day)}
                     className={`
                       absolute h-8 w-8 rounded-full text-sm font-medium flex items-center justify-center transition-all z-10
-                      ${disabled ? 'text-zinc-700 cursor-not-allowed' : 'hover:bg-zinc-700 text-zinc-300 cursor-pointer'}
-                      ${(isStart || isEnd) ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/30 scale-105' : ''}
-                      ${inRange && !isStart && !isEnd ? 'text-blue-200' : ''}
+                      ${disabled ? 'text-muted-foreground/30 cursor-not-allowed' : 'hover:bg-muted text-foreground cursor-pointer'}
+                      ${(isStart || isEnd) ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/30 scale-105' : ''}
+                      ${inRange && !isStart && !isEnd ? 'text-primary' : ''}
                     `}
                   >
                     {day}

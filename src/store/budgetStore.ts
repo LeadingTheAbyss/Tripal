@@ -8,6 +8,7 @@ interface BudgetStoreState extends BudgetState {
   addExpense: (category: 'transport' | 'places' | 'hotel' | 'commute', amount: number) => void;
   refundExpense: (category: 'transport' | 'places' | 'hotel' | 'commute', amount: number) => void;
   recalcBudget: () => void;
+  reset: () => void;
 }
 
 export const useBudgetStore = create<BudgetStoreState>()(
@@ -56,6 +57,16 @@ export const useBudgetStore = create<BudgetStoreState>()(
       projectedTotal: totalSpent,
       remaining
     };
+  }),
+
+  reset: () => set({
+    totalBudget: 0,
+    spentTransport: 0,
+    spentPlaces: 0,
+    spentHotels: 0,
+    spentCommute: 0,
+    remaining: 0,
+    projectedTotal: 0
   })
   }),
   {

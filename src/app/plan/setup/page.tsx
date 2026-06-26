@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useTripStore } from '@/store/tripStore';
 import { useBudgetStore } from '@/store/budgetStore';
+import { useItineraryStore } from '@/store/itineraryStore';
 import { Passenger } from '@/types/trip';
 import { api } from '@/lib/api';
 import { Plus, Copy, Trash2, ArrowRight, MapPin, Calendar, IndianRupee } from 'lucide-react';
@@ -61,7 +62,17 @@ export default function TripSetupPage() {
               label="To" 
               placeholder="e.g. Manali" 
               value={trip.destination} 
-              onChange={(val) => trip.setTripDetails({ destination: val })} 
+              onChange={(val) => {
+                if (val !== trip.destination) {
+                  budget.reset();
+                  useItineraryStore.getState().reset();
+                  trip.setTripDetails({ 
+                    destination: val,
+                    selectedTransports: [],
+                    selectedHotel: null 
+                  });
+                }
+              }} 
             />
             <ModernDateRangePicker 
               label="Duration of Stay"

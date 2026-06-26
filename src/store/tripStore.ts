@@ -23,6 +23,7 @@ interface TripState {
   selectTransport: (passengerId: string, option: any) => void;
   deselectTransport: (passengerId: string) => void;
   setHotel: (hotel: Hotel | null) => void;
+  reset: () => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -83,7 +84,18 @@ export const useTripStore = create<TripState>()(
     selectedTransports: state.selectedTransports.filter(t => t.passengerId !== passengerId)
   })),
 
-    setHotel: (hotel) => set({ selectedHotel: hotel })
+  setHotel: (hotel) => set({ selectedHotel: hotel }),
+
+  reset: () => set({
+    mode: null,
+    source: '',
+    destination: '',
+    startDate: null,
+    endDate: null,
+    passengers: [],
+    selectedTransports: [],
+    selectedHotel: null
+  })
   }),
   {
     name: 'trip-store', // name of the item in the storage (must be unique)

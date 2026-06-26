@@ -59,34 +59,34 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
 
   return (
     <div className="space-y-2 relative" ref={wrapperRef}>
-      <label className="text-sm font-medium text-zinc-400">{label}</label>
+      {label && <label className="text-sm font-medium text-muted-foreground">{label}</label>}
       <div className="relative">
         <input 
           type="text" 
           placeholder={placeholder}
-          className="w-full p-3 bg-zinc-900 border border-zinc-800 text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-zinc-600 pr-10"
+          className="w-full p-3 bg-background border border-input text-foreground rounded-lg focus:ring-2 focus:ring-primary outline-none placeholder:text-muted-foreground/50 pr-10 transition-colors"
           value={query}
           onChange={handleInputChange}
           onFocus={() => { if (results.length > 0) setIsOpen(true); }}
         />
         {loading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className="animate-spin text-zinc-500" size={18} />
+            <Loader2 className="animate-spin text-muted-foreground" size={18} />
           </div>
         )}
       </div>
       
       {isOpen && results.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden top-[100%]">
+        <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-xl overflow-hidden top-[100%]">
           {results.map((res, i) => (
             <div 
               key={i} 
-              className="p-3 hover:bg-zinc-800 cursor-pointer flex flex-col border-b last:border-0 border-zinc-800"
+              className="p-3 hover:bg-muted cursor-pointer flex flex-col border-b last:border-0 border-border transition-colors"
               onClick={() => handleSelect(res.name)}
             >
-              <div className="font-semibold text-white flex items-center gap-2">
-                <MapPin size={14} className="text-zinc-500" />
-                {res.name} <span className="text-zinc-500 text-xs font-normal">({res.state})</span>
+              <div className="font-semibold text-foreground flex items-center gap-2">
+                <MapPin size={14} className="text-muted-foreground" />
+                {res.name} <span className="text-muted-foreground text-xs font-normal">({res.state})</span>
               </div>
             </div>
           ))}

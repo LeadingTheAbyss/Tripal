@@ -3,8 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { useTripStore } from '@/store/tripStore';
+import { useBudgetStore } from '@/store/budgetStore';
+import { useItineraryStore } from '@/store/itineraryStore';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Sparkles, Map, IndianRupee, Plus, Trash2, CalendarDays, SlidersHorizontal, Filter, X } from 'lucide-react';
+import { ArrowRight, Sparkles, Map, IndianRupee, Plus, Trash2, CalendarDays, SlidersHorizontal, Filter, X, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/components/theme-provider';
 import CityAutocomplete from '@/components/CityAutocomplete';
 
 const PREFERENCES = [
@@ -81,11 +84,18 @@ export default function RecommendPage() {
   };
 
   const handleSelectDestination = (destName: string) => {
+    // Reset previous trip data but retain budget
+    useTripStore.getState().reset();
+    useBudgetStore.getState().reset();
+    useItineraryStore.getState().reset();
+
     trip.setTripDetails({ 
       mode: 'recommend',
       destination: destName.split(',')[0],
       baseBudget: form.budget
     });
+
+    useBudgetStore.getState().setTotalBudget(form.budget);
 
     if (trip.passengers.length === 0) {
       form.passengers.filter(p => p.city.trim() !== '').forEach((p, i) => {
@@ -131,22 +141,32 @@ export default function RecommendPage() {
     return Math.max(...rawResults.map(r => r.budgetEstimate || 0), form.budget);
   }, [rawResults, form.budget]);
 
+  const { theme, setTheme } = useTheme();
+
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col p-8">
+    <div className="min-h-screen bg-background text-foreground flex flex-col p-8 transition-colors duration-300">
       
-      <div className="mb-8 cursor-pointer" onClick={() => router.push('/')}>
-        <h1 className="text-xl font-bold text-blue-600">Ghumi-Ghumi ✈️</h1>
+      <div className="mb-8 flex justify-between items-center">
+        <div className="cursor-pointer" onClick={() => router.push('/')}>
+          <h1 className="text-xl font-bold text-primary">Ghumi-Ghumi ✈️</h1>
+        </div>
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
       </div>
 
       <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left: Input Form */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm h-fit space-y-6 sticky top-8">
+        <div className="lg:col-span-1 bg-card p-6 rounded-2xl border border-border shadow-sm h-fit space-y-6 sticky top-8">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2 mb-1">
-              <Sparkles className="text-blue-500" /> AI Discovery
+              <Sparkles className="text-primary" /> AI Discovery
             </h2>
-            <p className="text-sm text-zinc-500">Ollama will find the perfect middle-ground.</p>
+            <p className="text-sm text-muted-foreground">Ollama will find the perfect middle-ground.</p>
           </div>
 
           <div className="space-y-4">
@@ -180,21 +200,21 @@ export default function RecommendPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2"><IndianRupee size={16}/> Total Budget</label>
+                <label className="text-sm font-medium text-foreground flex items-center gap-2"><IndianRupee size={16}/> Total Budget</label>
                 <input 
                   type="number" 
                   min={1}
-                  className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full p-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none"
                   value={form.budget}
                   onChange={(e) => setForm({ ...form, budget: parseInt(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2"><CalendarDays size={16}/> Days</label>
+                <label className="text-sm font-medium text-foreground flex items-center gap-2"><CalendarDays size={16}/> Days</label>
                 <input 
                   type="number" 
                   min={1}
-                  className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full p-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none"
                   value={form.days}
                   onChange={(e) => setForm({ ...form, days: parseInt(e.target.value) || 0 })}
                 />
@@ -202,7 +222,7 @@ export default function RecommendPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-700 flex items-center gap-2"><Map size={16}/> Preferred Vibe</label>
+              <label className="text-sm font-medium text-foreground flex items-center gap-2"><Map size={16}/> Preferred Vibe</label>
               <div className="flex flex-wrap gap-2">
                 {PREFERENCES.map(pref => {
                   const isSelected = form.preference.includes(pref.id);
@@ -221,8 +241,8 @@ export default function RecommendPage() {
                     }}
                     className={`px-3 py-2 rounded-full text-sm font-medium transition-colors border ${
                       isSelected 
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                        : 'bg-white text-zinc-600 border-zinc-200 hover:border-blue-300'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                        : 'bg-background text-muted-foreground border-border hover:border-primary/50'
                     }`}
                   >
                     {pref.label}
@@ -234,7 +254,7 @@ export default function RecommendPage() {
             <button 
               onClick={handleSearch}
               disabled={loading}
-              className="w-full bg-black hover:bg-zinc-800 disabled:bg-zinc-400 text-white p-4 rounded-xl font-bold flex justify-center items-center gap-2 mt-4"
+              className="w-full bg-primary hover:opacity-90 disabled:bg-muted-foreground text-primary-foreground p-4 rounded-xl font-bold flex justify-center items-center gap-2 mt-4 transition-all"
             >
               {loading ? 'AI is thinking...' : 'Ask Ollama'} <ArrowRight size={18} />
             </button>

@@ -17,6 +17,7 @@ interface ItineraryState {
   
   recalcDay: (dayNumber: number) => void;
   autoSchedule: () => void;
+  reset: () => void;
 }
 
 export const useItineraryStore = create<ItineraryState>()(
@@ -163,6 +164,11 @@ export const useItineraryStore = create<ItineraryState>()(
     }
 
     return { days: newDays };
+  }),
+
+  reset: () => set({
+    days: [],
+    selectedPlaces: []
   })
   }),
   {

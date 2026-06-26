@@ -105,14 +105,18 @@ export default function ItineraryPage() {
     }
   }, [trip.startDate, trip.endDate, itinerary.days.length]);
 
+  const pointerSensorOptions = React.useMemo(() => ({ activationConstraint: { distance: 5 } }), []);
+  const keyboardSensorOptions = React.useMemo(() => ({ coordinateGetter: sortableKeyboardCoordinates }), []);
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(PointerSensor, pointerSensorOptions),
+    useSensor(KeyboardSensor, keyboardSensorOptions)
   );
 
   // Calculate unassigned places
-  const assignedPlaceIds = new Set(itinerary.days.flatMap(d => d.placeIds));
-  const unassignedPlaces = itinerary.selectedPlaces.filter(p => !assignedPlaceIds.has(p.id));
+  const assignedPlaceIds = React.useMemo(() => new Set(itinerary.days.flatMap(d => d.placeIds)), [itinerary.days]);
+  const unassignedPlaces = React.useMemo(() => itinerary.selectedPlaces.filter(p => !assignedPlaceIds.has(p.id)), [itinerary.selectedPlaces, assignedPlaceIds]);
+  const unassignedItemIds = React.useMemo(() => unassignedPlaces.map(p => p.id), [unassignedPlaces]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -235,7 +239,7 @@ export default function ItineraryPage() {
               )}
             </div>
             
-            <DroppableList id="unassigned" items={unassignedPlaces.map(p => p.id)} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <DroppableList id="unassigned" items={unassignedItemIds} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {unassignedPlaces.map(place => (
                 <SortablePlaceCard key={place.id} place={place} />
               ))}
