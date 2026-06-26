@@ -108,54 +108,16 @@ def get_hotels(destination: str):
         })
     return result
 
+from engines.ollama_engine import recommend as get_ai_recommendations
+
 @app.post("/api/recommendations")
 def get_recommendations(preferences: dict):
-    travelers = int(preferences.get("travelers", 1))
-    budget = int(preferences.get("budget", 50000))
-    setting = preferences.get("setting", "any").lower()
+    passengers = preferences.get("passengers", [])
+    total_budget = preferences.get("total_budget", 50000)
+    days = preferences.get("days", 3)
+    preference = preferences.get("preference", "any")
     
-    destinations = [
-        {"id": "dest_1", "name": "Manali, Himachal Pradesh", "tags": ["mountains", "adventure", "cool weather"], "base_cost": 15000, "why": "Perfect match for mountains with great adventure spots."},
-        {"id": "dest_2", "name": "Goa", "tags": ["beaches", "nightlife", "relaxation"], "base_cost": 20000, "why": "Famous for its vibrant nightlife and relaxing beaches."},
-        {"id": "dest_3", "name": "Jaipur, Rajasthan", "tags": ["history", "culture", "budget friendly"], "base_cost": 10000, "why": "Rich in cultural heritage and very budget-friendly."},
-        {"id": "dest_4", "name": "Shimla, Himachal Pradesh", "tags": ["mountains", "family", "cool weather"], "base_cost": 12000, "why": "Beautiful hill station with stunning colonial architecture."},
-        {"id": "dest_5", "name": "Andaman Islands", "tags": ["beaches", "adventure", "nature"], "base_cost": 30000, "why": "Pristine beaches and world-class scuba diving."},
-        {"id": "dest_6", "name": "Varanasi, Uttar Pradesh", "tags": ["history", "culture", "religious"], "base_cost": 8000, "why": "Deep cultural roots and spiritually enriching experience."},
-        {"id": "dest_7", "name": "Munnar, Kerala", "tags": ["mountains", "nature", "relaxation"], "base_cost": 18000, "why": "Lush green tea gardens and a peaceful relaxing vibe."},
-        {"id": "dest_8", "name": "Udaipur, Rajasthan", "tags": ["history", "culture", "romantic"], "base_cost": 15000, "why": "The City of Lakes offers a regal and romantic escape."},
-    ]
-
-    results = []
-    for d in destinations:
-        # Basic filtering by setting
-        if setting != "any" and setting not in d["tags"]:
-            continue
-            
-        est_cost = d["base_cost"] * travelers
-        
-        # Scoring logic based on budget match
-        if est_cost > budget:
-            # Over budget, lower score
-            penalty = ((est_cost - budget) / budget) * 100
-            score = max(30, int(90 - penalty))
-            why = d["why"] + " Note: This pushes slightly above your specified budget."
-        else:
-            # Within budget
-            savings = ((budget - est_cost) / budget) * 100
-            score = min(99, int(85 + (savings * 0.5)))
-            why = d["why"] + " Fits perfectly within your budget constraints!"
-            
-        results.append({
-            "id": d["id"],
-            "name": d["name"],
-            "score": score,
-            "budgetEstimate": est_cost,
-            "why": why,
-            "tags": [t.title() for t in d["tags"]]
-        })
-        
-    results.sort(key=lambda x: x["score"], reverse=True)
-    return results[:4] # Return top 4 matches
+    return get_ai_recommendations(passengers, total_budget, days, preference)
 
 @app.get("/api/image")
 def get_place_image(q: str):
