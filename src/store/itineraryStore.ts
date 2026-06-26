@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Place, ItineraryDay } from '../types/trip';
 
 interface ItineraryState {
@@ -15,9 +16,12 @@ interface ItineraryState {
   movePlaceBetweenDays: (placeId: string, fromDay: number, toDay: number, newIndex?: number) => void;
   
   recalcDay: (dayNumber: number) => void;
+  autoSchedule: () => void;
 }
 
-export const useItineraryStore = create<ItineraryState>((set, get) => ({
+export const useItineraryStore = create<ItineraryState>()(
+  persist(
+    (set, get) => ({
   days: [],
   selectedPlaces: [],
 
@@ -120,5 +124,48 @@ export const useItineraryStore = create<ItineraryState>((set, get) => ({
     );
 
     return { days: newDays };
+  }),
+
+  autoSchedule: () => set((state) => {
+    const newDays = JSON.parse(JSON.stringify(state.days)) as ItineraryDay[];
+    const assignedPlaceIds = new Set(newDays.flatMap(d => d.placeIds));
+    const unassignedPlaces = state.selectedPlaces.filter(p => !assignedPlaceIds.has(p.id));
+
+    if (unassignedPlaces.length === 0) return state;
+
+    let currentDayIndex = 0;
+
+    for (const place of unassignedPlaces) {
+      let placed = false;
+      const placeTime = place.visitDurationHours + place.travelTimeHours;
+      
+      for (let i = currentDayIndex; i < newDays.length; i++) {
+        const day = newDays[i];
+        if (day.totalTimeHours + placeTime <= 8) {
+          day.placeIds.push(place.id);
+          day.totalTimeHours += placeTime;
+          day.totalCost += place.entryFee;
+          placed = true;
+          currentDayIndex = i;
+          break;
+        }
+      }
+
+      if (!placed && newDays.length > 0) {
+        const dayToFill = newDays[currentDayIndex] || newDays[newDays.length - 1];
+        dayToFill.placeIds.push(place.id);
+        dayToFill.totalTimeHours += placeTime;
+        dayToFill.totalCost += place.entryFee;
+        if (dayToFill.totalTimeHours > 8) {
+          dayToFill.warnings = ['This day is getting too packed (>8 hours)'];
+        }
+      }
+    }
+
+    return { days: newDays };
   })
-}));
+  }),
+  {
+    name: 'itinerary-store', // name of the item in the storage (must be unique)
+  }
+));

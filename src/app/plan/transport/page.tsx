@@ -45,6 +45,16 @@ export default function TransportPage() {
   // Handle transport selection
   const handleSelectTransport = (paxId: string, option: TransportOption) => {
     const existingSelection = trip.selectedTransports.find(t => t.passengerId === paxId);
+    
+    // If clicking the currently selected option, deselect it
+    if (existingSelection && existingSelection.transportOptionId === option.id) {
+      budget.refundExpense('transport', existingSelection.cost);
+      trip.deselectTransport(paxId);
+      budget.recalcBudget();
+      return;
+    }
+
+    // Otherwise, select the new one (refunding the old one if it exists)
     if (existingSelection) {
       budget.refundExpense('transport', existingSelection.cost);
     }

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { TripMode, Passenger } from '../types/trip';
 
 interface TripState {
@@ -20,10 +21,13 @@ interface TripState {
   updatePassenger: (id: string, updates: Partial<Passenger>) => void;
   duplicatePassenger: (id: string, newId: string) => void;
   selectTransport: (passengerId: string, option: any) => void;
+  deselectTransport: (passengerId: string) => void;
   setHotel: (hotel: Hotel | null) => void;
 }
 
-export const useTripStore = create<TripState>((set) => ({
+export const useTripStore = create<TripState>()(
+  persist(
+    (set) => ({
   mode: null,
   source: '',
   destination: '',
@@ -75,5 +79,13 @@ export const useTripStore = create<TripState>((set) => ({
     };
   }),
 
-  setHotel: (hotel) => set({ selectedHotel: hotel })
-}));
+  deselectTransport: (passengerId) => set((state) => ({
+    selectedTransports: state.selectedTransports.filter(t => t.passengerId !== passengerId)
+  })),
+
+    setHotel: (hotel) => set({ selectedHotel: hotel })
+  }),
+  {
+    name: 'trip-store', // name of the item in the storage (must be unique)
+  }
+));

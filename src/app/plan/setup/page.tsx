@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTripStore } from '@/store/tripStore';
+import { useBudgetStore } from '@/store/budgetStore';
 import { Passenger } from '@/types/trip';
 import { api } from '@/lib/api';
 import { Plus, Copy, Trash2, ArrowRight, MapPin, Calendar, IndianRupee } from 'lucide-react';
@@ -13,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function TripSetupPage() {
   const router = useRouter();
   const trip = useTripStore();
+  const budget = useBudgetStore();
 
   const handleAddPassenger = () => {
     trip.addPassenger({
@@ -75,8 +77,9 @@ export default function TripSetupPage() {
               <input 
                 type="number"
                 placeholder="e.g. 100000"
+                value={budget.totalBudget || ''}
                 className="w-full p-3 bg-background border border-input rounded-xl text-foreground focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground transition-all duration-200"
-                onChange={(e) => { /* budget state connected later */ }}
+                onChange={(e) => budget.setTotalBudget(Number(e.target.value) || 0)}
               />
             </div>
           </div>
