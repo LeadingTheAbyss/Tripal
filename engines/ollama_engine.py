@@ -17,9 +17,9 @@ A group of {num_pax} travelers want to take a trip.
 - Duration: {days} days (excluding travel days)
 - Primary preference: {preference} (e.g. mountains, beaches, heritage, desert, wildlife, spiritual)
 
-Recommend 6 destinations in India. 
-- The first 3 destinations MUST match their primary preference ("{preference}"). 
-- The other 3 destinations MUST be of different categories (e.g., if they like beaches, show mountains or heritage) to give them alternative options.
+Recommend 12 destinations in India. 
+- The first 6 destinations MUST match their primary preference ("{preference}"). 
+- The other 6 destinations MUST be of different categories (e.g., if they like beaches, show mountains or heritage) to give them alternative options.
 For each destination, return this EXACT JSON structure inside an array:
 [
   {{
@@ -41,7 +41,7 @@ Rules:
 - budgetEstimate MUST NOT exceed ₹{total_budget}.
 - matchScore is 0-100. Primary preference destinations score 80-100, others score 50-79.
 - isPrimaryMatch is true ONLY for destinations matching "{preference}".
-- Return EXACTLY 6 destinations.
+- Return EXACTLY 12 destinations.
 - CRITICAL: No markdown, no explanation, ONLY the JSON array. Output must start with '[' and end with ']'.
 """
 

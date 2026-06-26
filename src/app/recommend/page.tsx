@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { useTripStore } from '@/store/tripStore';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Sparkles, Map, IndianRupee, Plus, Trash2, CalendarDays } from 'lucide-react';
+import { ArrowRight, Sparkles, Map, IndianRupee, Plus, Trash2, CalendarDays, SlidersHorizontal, Filter, X } from 'lucide-react';
 import CityAutocomplete from '@/components/CityAutocomplete';
 
 const PREFERENCES = [
@@ -25,11 +25,16 @@ export default function RecommendPage() {
     passengers: [{ city: '' }],
     budget: 100000,
     days: 4,
-    preference: 'mountains'
+    preference: ['mountains']
   });
 
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
+  const [rawResults, setRawResults] = useState<any[]>([]);
+  
+  // Filters State
+  const [sortBy, setSortBy] = useState('match'); // 'match', 'price_asc', 'price_desc'
+  const [filterPrimaryOnly, setFilterPrimaryOnly] = useState(false);
+  const [filterMaxBudget, setFilterMaxBudget] = useState<number | null>(null);
 
   const handleAddPassenger = () => {
     if (form.passengers.length >= 10) return;
@@ -58,9 +63,20 @@ export default function RecommendPage() {
       passengers: validPassengers,
       total_budget: form.budget,
       days: form.days,
-      preference: form.preference
+      preference: form.preference.join(' and ')
     });
-    setResults(data);
+    setRawResults(data);
+    
+    // Reset filters
+    setSortBy('match');
+    setFilterPrimaryOnly(false);
+    
+    // Set dynamic max budget based on results
+    if (data.length > 0) {
+      const maxCost = Math.max(...data.map((d: any) => d.budgetEstimate || 0));
+      setFilterMaxBudget(maxCost);
+    }
+    
     setLoading(false);
   };
 
@@ -71,7 +87,6 @@ export default function RecommendPage() {
       baseBudget: form.budget
     });
 
-    // Optionally pre-fill passengers if store is empty
     if (trip.passengers.length === 0) {
       form.passengers.filter(p => p.city.trim() !== '').forEach((p, i) => {
         trip.addPassenger({
@@ -90,10 +105,35 @@ export default function RecommendPage() {
     router.push('/plan/setup');
   };
 
+  const filteredResults = useMemo(() => {
+    let filtered = [...rawResults];
+
+    if (filterPrimaryOnly) {
+      filtered = filtered.filter(r => r.isPrimaryMatch);
+    }
+    
+    if (filterMaxBudget !== null) {
+      filtered = filtered.filter(r => (r.budgetEstimate || 0) <= filterMaxBudget);
+    }
+
+    filtered.sort((a, b) => {
+      if (sortBy === 'price_asc') return (a.budgetEstimate || 0) - (b.budgetEstimate || 0);
+      if (sortBy === 'price_desc') return (b.budgetEstimate || 0) - (a.budgetEstimate || 0);
+      // match
+      return (b.matchScore || 0) - (a.matchScore || 0);
+    });
+
+    return filtered;
+  }, [rawResults, filterPrimaryOnly, filterMaxBudget, sortBy]);
+
+  const maxPossibleBudget = useMemo(() => {
+    if (rawResults.length === 0) return form.budget;
+    return Math.max(...rawResults.map(r => r.budgetEstimate || 0), form.budget);
+  }, [rawResults, form.budget]);
+
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col p-8">
       
-      {/* Header */}
       <div className="mb-8 cursor-pointer" onClick={() => router.push('/')}>
         <h1 className="text-xl font-bold text-blue-600">Ghumi-Ghumi ✈️</h1>
       </div>
@@ -101,7 +141,7 @@ export default function RecommendPage() {
       <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left: Input Form */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm h-fit space-y-6">
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm h-fit space-y-6 sticky top-8">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2 mb-1">
               <Sparkles className="text-blue-500" /> AI Discovery
@@ -110,7 +150,6 @@ export default function RecommendPage() {
           </div>
 
           <div className="space-y-4">
-            {/* Passenger Cities */}
             <div>
               <label className="text-sm font-medium text-zinc-700 flex items-center gap-2 mb-2">
                 Home Cities
@@ -139,12 +178,12 @@ export default function RecommendPage() {
               </button>
             </div>
 
-            {/* Budget & Days */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-700 flex items-center gap-2"><IndianRupee size={16}/> Total Budget</label>
                 <input 
                   type="number" 
+                  min={1}
                   className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   value={form.budget}
                   onChange={(e) => setForm({ ...form, budget: parseInt(e.target.value) || 0 })}
@@ -154,6 +193,7 @@ export default function RecommendPage() {
                 <label className="text-sm font-medium text-zinc-700 flex items-center gap-2"><CalendarDays size={16}/> Days</label>
                 <input 
                   type="number" 
+                  min={1}
                   className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   value={form.days}
                   onChange={(e) => setForm({ ...form, days: parseInt(e.target.value) || 0 })}
@@ -161,23 +201,33 @@ export default function RecommendPage() {
               </div>
             </div>
 
-            {/* Preferences */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-700 flex items-center gap-2"><Map size={16}/> Preferred Vibe</label>
               <div className="flex flex-wrap gap-2">
-                {PREFERENCES.map(pref => (
+                {PREFERENCES.map(pref => {
+                  const isSelected = form.preference.includes(pref.id);
+                  return (
                   <button
                     key={pref.id}
-                    onClick={() => setForm({ ...form, preference: pref.id })}
+                    onClick={() => {
+                      if (isSelected) {
+                        // Prevent unselecting the last option
+                        if (form.preference.length > 1) {
+                          setForm({ ...form, preference: form.preference.filter(p => p !== pref.id) });
+                        }
+                      } else {
+                        setForm({ ...form, preference: [...form.preference, pref.id] });
+                      }
+                    }}
                     className={`px-3 py-2 rounded-full text-sm font-medium transition-colors border ${
-                      form.preference === pref.id 
+                      isSelected 
                         ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
                         : 'bg-white text-zinc-600 border-zinc-200 hover:border-blue-300'
                     }`}
                   >
                     {pref.label}
                   </button>
-                ))}
+                )})}
               </div>
             </div>
 
@@ -199,57 +249,118 @@ export default function RecommendPage() {
               <p className="text-lg font-medium text-zinc-600">Ollama is analyzing the map...</p>
               <p className="text-sm">Calculating budgets and travel routes for everyone.</p>
             </div>
-          ) : results.length > 0 ? (
+          ) : rawResults.length > 0 ? (
             <>
-              {results.some(r => r.isPrimaryMatch) && (
-                 <h3 className="text-xl font-bold text-zinc-900 mb-2">Best for You</h3>
-              )}
+              {/* Filter Toolbar */}
+              <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-zinc-900 flex items-center gap-2">
+                    <Filter size={18} className="text-blue-500" /> Filter & Sort
+                  </h3>
+                  <div className="text-sm font-medium text-zinc-500">
+                    Showing {filteredResults.length} of {rawResults.length} destinations
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Sort */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-500 uppercase">Sort By</label>
+                    <select 
+                      className="w-full p-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-blue-500"
+                      value={sortBy}
+                      onChange={e => setSortBy(e.target.value)}
+                    >
+                      <option value="match">Best Match (Score)</option>
+                      <option value="price_asc">Price: Low to High</option>
+                      <option value="price_desc">Price: High to Low</option>
+                    </select>
+                  </div>
+
+                  {/* Vibe Filter */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-500 uppercase">Vibe Match</label>
+                    <div className="flex items-center h-[38px]">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-zinc-300"
+                          checked={filterPrimaryOnly}
+                          onChange={(e) => setFilterPrimaryOnly(e.target.checked)}
+                        />
+                        <span className="text-sm font-medium text-zinc-700">Show only my preferred vibe</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Budget Slider */}
+                  <div className="md:col-span-2 space-y-2">
+                    <div className="flex justify-between">
+                      <label className="text-xs font-semibold text-zinc-500 uppercase">Max Budget: ₹{filterMaxBudget?.toLocaleString()}</label>
+                    </div>
+                    <input 
+                      type="range" 
+                      min={0} 
+                      max={maxPossibleBudget} 
+                      step={1000}
+                      value={filterMaxBudget || maxPossibleBudget}
+                      onChange={(e) => setFilterMaxBudget(parseInt(e.target.value))}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Cards */}
               <div className="grid grid-cols-1 gap-4">
-                {results.map((dest, i) => {
+                {filteredResults.length === 0 && (
+                  <div className="p-8 text-center text-zinc-500 border-2 border-dashed border-zinc-200 rounded-2xl">
+                    No destinations match your current filters.
+                  </div>
+                )}
+                {filteredResults.map((dest, i) => {
                   const isPrimary = dest.isPrimaryMatch;
-                  // If we transition from primary to non-primary, show a divider header
-                  const showOtherHeader = !isPrimary && i > 0 && results[i-1].isPrimaryMatch;
 
                   return (
-                    <React.Fragment key={dest.id || i}>
-                      {showOtherHeader && (
-                        <h3 className="text-xl font-bold text-zinc-900 mt-6 mb-2">You Might Also Like</h3>
-                      )}
-                      <div className={`bg-white p-6 rounded-2xl border ${isPrimary ? 'border-blue-200 shadow-md' : 'border-zinc-200 shadow-sm'} flex flex-col md:flex-row md:items-center gap-6 relative overflow-hidden group hover:border-blue-400 transition-colors`}>
-                        {isPrimary && <div className="absolute top-0 left-0 w-2 h-full bg-blue-500" />}
-                        
-                        <div className="flex-1 pl-2">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="text-2xl font-bold text-zinc-900">{dest.name}</h4>
-                            <span className="text-sm text-zinc-500 font-medium">{dest.state}</span>
-                            <span className={`px-2 py-1 rounded text-xs font-bold ml-auto md:ml-0 ${dest.matchScore > 80 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                              {dest.matchScore}% Match
+                    <div key={dest.id || i} className={`bg-white p-6 rounded-2xl border ${isPrimary ? 'border-blue-200 shadow-md' : 'border-zinc-200 shadow-sm'} flex flex-col md:flex-row md:items-center gap-6 relative overflow-hidden group hover:border-blue-400 transition-colors`}>
+                      {isPrimary && <div className="absolute top-0 left-0 w-2 h-full bg-blue-500" />}
+                      
+                      <div className="flex-1 pl-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <h4 className="text-2xl font-bold text-zinc-900">{dest.name}</h4>
+                          <span className="text-sm text-zinc-500 font-medium">{dest.state}</span>
+                          {dest.category && (
+                            <span className="px-2 py-1 bg-zinc-100 text-zinc-600 rounded text-xs font-bold uppercase tracking-wider">
+                              {dest.category}
                             </span>
-                          </div>
-                          
-                          <p className="text-sm text-zinc-600 mb-4 bg-zinc-50 p-3 rounded-lg border border-zinc-100 italic">
-                            "{dest.why}"
-                          </p>
-
-                          <div className="flex gap-2 text-xs font-medium text-zinc-500 mb-4 flex-wrap">
-                            {dest.tags?.map((t: string) => <span key={t} className="bg-zinc-100 px-2 py-1 rounded-full">{t}</span>)}
-                          </div>
+                          )}
+                          <span className={`px-2 py-1 rounded text-xs font-bold ml-auto md:ml-0 ${dest.matchScore > 80 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {dest.matchScore}% Match
+                          </span>
                         </div>
+                        
+                        <p className="text-sm text-zinc-600 mb-4 bg-zinc-50 p-3 rounded-lg border border-zinc-100 italic">
+                          "{dest.why}"
+                        </p>
 
-                        <div className="shrink-0 flex flex-col md:items-end border-t md:border-t-0 md:border-l border-zinc-100 pt-4 md:pt-0 md:pl-6">
-                          <div className="text-sm font-medium text-zinc-500 mb-1">Estimated Cost (All)</div>
-                          <div className="text-2xl font-black text-zinc-900 mb-1">₹{dest.budgetEstimate?.toLocaleString()}</div>
-                          <div className="text-xs text-zinc-400 mb-4">~₹{dest.perPersonEstimate?.toLocaleString()} / person</div>
-                          
-                          <button 
-                            onClick={() => handleSelectDestination(dest.name)}
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-6 py-3 rounded-xl font-bold w-full md:w-auto transition-colors"
-                          >
-                            Plan this Trip
-                          </button>
+                        <div className="flex gap-2 text-xs font-medium text-zinc-500 mb-4 flex-wrap">
+                          {dest.tags?.map((t: string) => <span key={t} className="bg-zinc-100 px-2 py-1 rounded-full">{t}</span>)}
                         </div>
                       </div>
-                    </React.Fragment>
+
+                      <div className="shrink-0 flex flex-col md:items-end border-t md:border-t-0 md:border-l border-zinc-100 pt-4 md:pt-0 md:pl-6 min-w-[200px]">
+                        <div className="text-sm font-medium text-zinc-500 mb-1">Estimated Cost (All)</div>
+                        <div className="text-2xl font-black text-zinc-900 mb-1">₹{dest.budgetEstimate?.toLocaleString()}</div>
+                        <div className="text-xs text-zinc-400 mb-4">~₹{dest.perPersonEstimate?.toLocaleString()} / person</div>
+                        
+                        <button 
+                          onClick={() => handleSelectDestination(dest.name)}
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-6 py-3 rounded-xl font-bold w-full transition-colors mt-auto"
+                        >
+                          Plan this Trip
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>

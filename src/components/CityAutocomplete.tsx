@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
-import { MapPin } from 'lucide-react';
-import { INDIAN_CITIES } from '@/lib/cities';
+import { MapPin, Loader2 } from 'lucide-react';
+
 
 interface CityAutocompleteProps {
   label: string;
@@ -16,6 +16,7 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Sync internal query with external value if it changes
@@ -33,20 +34,17 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
     onChange(val); // Keep parent state updated
 
-    if (val.length >= 1) {
-      const filtered = INDIAN_CITIES.filter(city => 
-        city.toLowerCase().startsWith(val.toLowerCase())
-      )
-      .sort((a, b) => a.localeCompare(b)) // Alphabetical sort
-      .slice(0, 8); // Top 8 matches
-      
-      setResults(filtered);
+    if (val.length >= 2) {
+      setLoading(true);
+      const apiResults = await api.searchCity(val);
+      setResults(apiResults);
       setIsOpen(true);
+      setLoading(false);
     } else {
       setResults([]);
       setIsOpen(false);
@@ -62,14 +60,21 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
   return (
     <div className="space-y-2 relative" ref={wrapperRef}>
       <label className="text-sm font-medium text-zinc-400">{label}</label>
-      <input 
-        type="text" 
-        placeholder={placeholder}
-        className="w-full p-3 bg-zinc-900 border border-zinc-800 text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-zinc-600"
-        value={query}
-        onChange={handleInputChange}
-        onFocus={() => { if (results.length > 0) setIsOpen(true); }}
-      />
+      <div className="relative">
+        <input 
+          type="text" 
+          placeholder={placeholder}
+          className="w-full p-3 bg-zinc-900 border border-zinc-800 text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-zinc-600 pr-10"
+          value={query}
+          onChange={handleInputChange}
+          onFocus={() => { if (results.length > 0) setIsOpen(true); }}
+        />
+        {loading && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <Loader2 className="animate-spin text-zinc-500" size={18} />
+          </div>
+        )}
+      </div>
       
       {isOpen && results.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden top-[100%]">
@@ -77,11 +82,11 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
             <div 
               key={i} 
               className="p-3 hover:bg-zinc-800 cursor-pointer flex flex-col border-b last:border-0 border-zinc-800"
-              onClick={() => handleSelect(res)}
+              onClick={() => handleSelect(res.name)}
             >
               <div className="font-semibold text-white flex items-center gap-2">
                 <MapPin size={14} className="text-zinc-500" />
-                {res}
+                {res.name} <span className="text-zinc-500 text-xs font-normal">({res.state})</span>
               </div>
             </div>
           ))}
