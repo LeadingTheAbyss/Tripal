@@ -8,8 +8,9 @@ datasource db {
 }
 
 model AppState {
-  id        String   @id @default("singleton")
-  data      String // JSON serialized string of the entire Zustand state
+  id        String   @id @default(cuid())
+  storeName String   @unique
+  stateJson String // JSON serialized string of the Zustand state
   updatedAt DateTime @updatedAt
 }
 

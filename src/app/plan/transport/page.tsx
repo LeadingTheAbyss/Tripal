@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { Plane, Train, Bus, Car, ArrowRight, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TrainRouteModal, LiveStatusModal, StationBoardModal } from '@/components/ui/TrainModals';
 
 export default function TransportPage() {
   const router = useRouter();
@@ -18,6 +19,11 @@ export default function TransportPage() {
   const [transportMap, setTransportMap] = useState<Record<string, TransportOption[]>>({});
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'recommended' | 'cheapest' | 'fastest' | 'earliest'>('recommended');
+
+  const [routeModalOpen, setRouteModalOpen] = useState(false);
+  const [liveModalOpen, setLiveModalOpen] = useState(false);
+  const [stationBoardOpen, setStationBoardOpen] = useState(false);
+  const [activeTrainId, setActiveTrainId] = useState('');
 
   // Fetch transport options for all passengers on mount
   useEffect(() => {
@@ -109,7 +115,10 @@ export default function TransportPage() {
         >
           <div>
             <h1 className="text-3xl font-bold mb-2">Transport Options</h1>
-            <p className="text-muted-foreground">Select how everyone is getting to <span className="font-semibold text-foreground">{trip.destination || 'the destination'}</span>.</p>
+            <p className="text-muted-foreground">Select how everyone is getting to <span className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => setStationBoardOpen(true)}>{trip.destination || 'the destination'}</span>.</p>
+            <button onClick={() => setStationBoardOpen(true)} className="mt-2 text-xs font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400 border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 rounded-full hover:bg-orange-500/20 transition-colors">
+              Explore Live Station Board
+            </button>
           </div>
           <div className="flex flex-col gap-1 text-right">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sort Options</label>
@@ -238,10 +247,33 @@ export default function TransportPage() {
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-sm text-muted-foreground mt-1">
-                                      {opt.departure} <ArrowRight className="inline mx-1" size={14}/> {opt.arrival} ({opt.duration})
+                                      <div className="text-sm text-muted-foreground mt-1">
+                                        {opt.departure} <ArrowRight className="inline mx-1" size={14}/> {opt.arrival} ({opt.duration})
+                                      </div>
+                                      
+                                      {opt.type === 'train' && opt.id.startsWith('tr_') && (
+                                        <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                                          <button 
+                                            onClick={() => {
+                                              setActiveTrainId(opt.id.split('_')[1]);
+                                              setRouteModalOpen(true);
+                                            }}
+                                            className="text-xs font-semibold px-3 py-1.5 rounded-md bg-muted text-foreground hover:bg-primary hover:text-primary-foreground transition-colors border border-border"
+                                          >
+                                            View Route
+                                          </button>
+                                          <button 
+                                            onClick={() => {
+                                              setActiveTrainId(opt.id.split('_')[1]);
+                                              setLiveModalOpen(true);
+                                            }}
+                                            className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors border border-blue-500/20"
+                                          >
+                                            Live Status
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
-                                  </div>
                                 </div>
 
                                 <div className="text-right">
@@ -283,6 +315,23 @@ export default function TransportPage() {
           </motion.button>
         </motion.div>
       </div>
+
+      <TrainRouteModal 
+        isOpen={routeModalOpen} 
+        onClose={() => setRouteModalOpen(false)} 
+        trainNumber={activeTrainId} 
+      />
+      <LiveStatusModal 
+        isOpen={liveModalOpen} 
+        onClose={() => setLiveModalOpen(false)} 
+        trainNumber={activeTrainId} 
+      />
+      <StationBoardModal 
+        isOpen={stationBoardOpen} 
+        onClose={() => setStationBoardOpen(false)} 
+        stationCode={trip.destination}
+        stationName={trip.destination}
+      />
     </div>
   );
 }

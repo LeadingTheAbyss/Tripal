@@ -61,6 +61,20 @@ def get_transport(source: str, destination: str):
         })
     return result
 
+from services.live_trains_api import get_train_route, get_live_train_status, get_station_board
+
+@app.get("/api/trains/{train_number}/route")
+def api_get_train_route(train_number: str):
+    return get_train_route(train_number)
+
+@app.get("/api/trains/{train_number}/live")
+def api_get_live_train_status(train_number: str, date: str):
+    return get_live_train_status(train_number, date)
+
+@app.get("/api/stations/{station_code}/board")
+def api_get_station_board(station_code: str):
+    return get_station_board(station_code)
+
 @app.get("/api/places")
 def get_places(destination: str):
     trip = TripState(
