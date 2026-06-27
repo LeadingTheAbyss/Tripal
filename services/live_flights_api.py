@@ -80,6 +80,8 @@ def search_live_flights(origin_iata: str, dest_iata: str, date: str) -> List[Tra
             
         return sorted(options, key=lambda x: x.price)
         
+    except requests.exceptions.RequestException:
+        print("[Warning] SerpApi connection failed. Using fallback flights.")
     except Exception as e:
-        print(f"Error fetching live flights: {e}")
-        return []
+        print(f"[Error] Unexpected error in SerpApi flights fetch: {e}")
+    return []

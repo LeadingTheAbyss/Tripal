@@ -155,7 +155,7 @@ from typing import List, Dict, Any
 @app.get("/api/search-city")
 def search_city(q: str = "") -> List[Dict[str, Any]]:
     """
-    Handles location autocomplete queries using the free Photon API.
+    Handles location autocomplete queries using the free Photon API with a local fallback.
     """
     if not q or len(q) < 2:
         return []
@@ -166,11 +166,10 @@ def search_city(q: str = "") -> List[Dict[str, Any]]:
         "limit": 5
     }
     headers = {
-        "User-Agent": "Ghumi-Ghumi/1.0 (TravelApp)"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
     
     try:
-        # Reasonable request timeout of 3 seconds
         response = requests.get(url, params=params, headers=headers, timeout=3.0)
         response.raise_for_status()
         data = response.json()
@@ -178,7 +177,6 @@ def search_city(q: str = "") -> List[Dict[str, Any]]:
         results = []
         features = data.get("features", [])
         
-        # If no features are returned, log it for debugging
         if not features:
             print(f"[Debug] Photon returned no features for query: '{q}'")
             
@@ -188,15 +186,12 @@ def search_city(q: str = "") -> List[Dict[str, Any]]:
             
             name = props.get("name", "Unknown")
             
-            # Fallback cleanly if state is missing
             state = props.get("state")
             if not state:
                 state = props.get("county", "")
             
             formatted_name = f"{name}, {state}" if state else name
             
-            # Extract coordinates
-            # Note: Photon natively outputs [longitude, latitude] which aligns perfectly with OSRM requirements!
             coords = geom.get("coordinates", [])
             osrm_coords = ""
             if len(coords) == 2:
@@ -212,13 +207,37 @@ def search_city(q: str = "") -> List[Dict[str, Any]]:
         return results
         
     except Exception as e:
-        err_msg = str(e)
-        if hasattr(e, 'response') and e.response is not None:
-            err_msg += f" - {e.response.text}"
-        print(f"[Error] Failed to fetch city autocomplete from Photon API: {err_msg}")
+        print(f"[Error] Failed to fetch city autocomplete from Photon API: {str(e)}")
+        
+        # Local Fallback for top Indian cities if Photon goes down
+        q_lower = q.lower()
+        fallback_cities = [
+            {"name": "New Delhi", "state": "Delhi", "osrm_coords": "77.2090,28.6139"},
+            {"name": "Mumbai", "state": "Maharashtra", "osrm_coords": "72.8777,19.0760"},
+            {"name": "Bangalore", "state": "Karnataka", "osrm_coords": "77.5946,12.9716"},
+            {"name": "Hyderabad", "state": "Telangana", "osrm_coords": "78.4747,17.3616"},
+            {"name": "Chennai", "state": "Tamil Nadu", "osrm_coords": "80.2707,13.0827"},
+            {"name": "Kolkata", "state": "West Bengal", "osrm_coords": "88.3639,22.5726"},
+            {"name": "Lucknow", "state": "Uttar Pradesh", "osrm_coords": "80.9462,26.8467"},
+            {"name": "Jaipur", "state": "Rajasthan", "osrm_coords": "75.7873,26.9124"},
+            {"name": "Pune", "state": "Maharashtra", "osrm_coords": "73.8567,18.5204"},
+            {"name": "Ahmedabad", "state": "Gujarat", "osrm_coords": "72.5714,23.0225"},
+        ]
+        
+        matched_cities = [c for c in fallback_cities if q_lower in c["name"].lower()]
+        
+        if matched_cities:
+            return [{
+                "name": c["name"],
+                "state": c["state"],
+                "formatted_name": f"{c['name']}, {c['state']}",
+                "osrm_coords": c["osrm_coords"]
+            } for c in matched_cities]
+            
+        # Return graceful failure if no fallback matches
         return [{
-            "name": f"Error: {err_msg[:50]}",
+            "name": f"Error: Network issue",
             "state": "API Error",
-            "formatted_name": f"Error: {err_msg[:80]}",
+            "formatted_name": f"Error: Connection to mapping service failed",
             "osrm_coords": ""
         }]
