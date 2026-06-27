@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { dbStorage } from '../lib/dbStorage';
 import { Place, ItineraryDay } from '../types/trip';
 
 interface ItineraryState {
@@ -173,5 +174,6 @@ export const useItineraryStore = create<ItineraryState>()(
   }),
   {
     name: 'itinerary-store', // name of the item in the storage (must be unique)
+    storage: createJSONStorage(() => dbStorage),
   }
 ));

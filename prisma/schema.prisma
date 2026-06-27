@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AppState {
+  id        String   @id @default("singleton")
+  data      String // JSON serialized string of the entire Zustand state
+  updatedAt DateTime @updatedAt
+}
+
+model PnrCache {
+  id        String   @id @default(cuid())
+  pnrNumber String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt
+}

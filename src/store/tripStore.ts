@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { dbStorage } from '../lib/dbStorage';
 import { TripMode, Passenger } from '../types/trip';
 
 interface TripState {
@@ -99,5 +100,6 @@ export const useTripStore = create<TripState>()(
   }),
   {
     name: 'trip-store', // name of the item in the storage (must be unique)
+    storage: createJSONStorage(() => dbStorage),
   }
 ));
