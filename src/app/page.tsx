@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowRight, Sparkles, Search, Globe, ChevronDown } from 'lucide-react';
+import { ArrowRight, Sparkles, Search, Globe, ChevronDown, Train } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -640,8 +640,27 @@ export default function LandingPage() {
                 <p className="text-blue-100 text-lg mb-8 leading-relaxed">
                   "I already know I'm going to Manali. Plan the logistics for me."
                 </p>
-                <div className="flex items-center text-white font-bold group-hover:translate-x-2 transition-transform">
-                  Direct Setup <ArrowRight className="ml-2" />
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <button 
+                    onClick={() => router.push('/plan')}
+                    className="group relative px-8 py-4 bg-white text-slate-900 rounded-full font-bold text-lg overflow-hidden transition-transform hover:scale-105"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-indigo-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <span className="relative flex items-center gap-2">
+                      Start Planning Now
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => router.push('/pnr')}
+                    className="group relative px-8 py-4 bg-blue-900/40 border border-blue-400/30 text-white rounded-full font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:bg-blue-800/50 backdrop-blur-md"
+                  >
+                    <span className="relative flex items-center gap-2">
+                      Check PNR Status
+                      <Train className="w-5 h-5 opacity-80 group-hover:scale-110 transition-transform" />
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
