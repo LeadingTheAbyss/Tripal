@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from models.entities import TransportOption
 from models.enums import TransportType
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Expanded city to station mapping for Indian Railways
 CITY_TO_STATION = {
@@ -112,46 +112,34 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
         print(f"[Warning] Could not dynamically map {clean_origin} or {clean_dest} to a station code.")
         return _get_fallback_trains(origin_city, dest_city, date)
 
-    url = f"https://erail.in/rail/getTrains.aspx?Station_From={origin_code}&Station_To={dest_code}&DataSource=0&Language=0&Cache=true"
+    # Format date from YYYY-MM-DD to DD-MM-YYYY for indian-rail-api
+    try:
+        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d-%m-%Y")
+    except Exception:
+        formatted_date = date
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+    url = "http://localhost:3001/trains/getTrainOn"
+    querystring = {
+        "from": origin_code,
+        "to": dest_code,
+        "date": formatted_date
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, params=querystring, timeout=15)
         response.raise_for_status()
-        text_data = response.text
+        data = response.json()
         
-        if "No direct trains found" in text_data or "Please try again" in text_data or "station not found" in text_data:
-            print("[Warning] erail.in returned no trains or error.")
-            return _get_fallback_trains(origin_city, dest_city, date)
-            
-        # Parse the custom erail format
-        train_blocks = text_data.split("~~~~~~~~")
-        parsed_trains = []
-        
-        for block in train_blocks:
-            if not block.strip(): continue
-            parts = block.split("~^")
-            if len(parts) == 2:
-                fields = [f for f in parts[1].split("~") if f]
-                if len(fields) >= 14:
-                    parsed_trains.append({
-                        "train_no": fields[0],
-                        "train_name": fields[1],
-                        "from_time": fields[10],
-                        "to_time": fields[11],
-                        "travel_time": fields[12],
-                        "running_days": fields[13]
-                    })
-                    
         options = []
-        if not parsed_trains:
-            print("[Warning] No trains parsed from erail.in.")
+        
+        if not data.get("success") or not data.get("data"):
+            print(f"[Warning] Local API returned failure or no trains: {data.get('data', 'Unknown error')}")
             return _get_fallback_trains(origin_city, dest_city, date)
             
-        for idx, train in enumerate(parsed_trains[:10]):
+        train_list = data.get("data", [])
+        
+        for idx, train_obj in enumerate(train_list[:10]):
+            train = train_obj.get("train_base", {})
             train_num = train.get("train_no", f"T{idx}")
             train_name = train.get("train_name", f"Train {train_num}")
             dep_time_str = train.get("from_time", "08:00")
@@ -198,7 +186,7 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
         return sorted(options, key=lambda x: x.price)
         
     except Exception as e:
-        print(f"Error fetching live trains directly from erail.in: {e}")
+        print(f"Error fetching live trains from fixed local API: {e}")
         return _get_fallback_trains(origin_city, dest_city, date)
 
 def _get_fallback_trains(source, dest, date_str):
