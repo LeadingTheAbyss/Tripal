@@ -1,17 +1,6 @@
-import requests
+from services.live_flights_api import search_live_flights
 
-url = "http://localhost:3001/trains/getTrainOn"
-querystring = {
-    "from": "NDLS",
-    "to": "LKO",
-    "date": "07-07-2026"
-}
-
-try:
-    response = requests.get(url, params=querystring, timeout=15)
-    with open("test_api.log", "w") as f:
-        f.write(f"Status: {response.status_code}\n")
-        f.write(f"Response: {response.text}\n")
-except Exception as e:
-    with open("test_api.log", "w") as f:
-        f.write(f"Error: {e}\n")
+flights = search_live_flights("BOM", "DEL", "2026-07-12")
+for f in flights:
+    print(f"[{f.provider}] {f.departure.strftime('%H:%M')} -> {f.arrival.strftime('%H:%M')} | {f.duration_hours}h | INR {f.price}")
+print(f"Total flights found: {len(flights)}")
