@@ -83,7 +83,7 @@ def search_live_flights(origin_iata: str, dest_iata: str, date: str) -> List[Tra
     # Fallback to FlightAPI if no flights found
     if not options:
         print(f"[API Call] Route {origin_iata} -> {dest_iata} not found in DGCA. Falling back to FlightAPI...")
-        api_key = "6a40cc228466d4877c15a08c"
+        api_key = os.environ.get("FLIGHTAPI_KEY", "6a40cc228466d4877c15a08c")
         url = f"https://api.flightapi.io/onewaytrip/{api_key}/{origin_iata}/{dest_iata}/{date}/1/0/0/Economy/USD"
         try:
             resp = requests.get(url)
