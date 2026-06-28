@@ -5,7 +5,6 @@ from models.enums import TransportType, Weather
 from models.state import TripState
 from data.mock_db import MOCK_PLACES_DB, MOCK_HOTEL_DB
 from engines.safety_engine import calculate_safety_score
-from services.google_places_api import fetch_live_taxi_services
 from services.live_places_api import search_live_places
 from services.live_hotels_api import search_live_hotels
 from services.live_flights_api import search_live_flights
@@ -47,16 +46,28 @@ def rank_transport(source: str, dest: str, date: datetime, passengers: List[Pass
     return transports
 
 from services.overpass_places_api import fetch_overpass_places
+from services.opentripmap_api import search_opentripmap_places
+from services.geoapify_api import search_geoapify_places
 
 def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
-    places = search_live_places(city)
-    if not places:
-        # Fallback if Live API fails or is empty
-        print("[Fallback] TripAdvisor API returned no places. Using Overpass API.")
-        places = fetch_overpass_places(city)
-        if not places:
-            places = MOCK_PLACES_DB.get(city, [])
+    # 1. Primary: OpenTripMap API (5000 req/day free, proven Indian coverage)
+    places = search_opentripmap_places(city)
     
+    if not places:
+        # 2. Secondary: Geoapify API
+        print(f"[Fallback] OpenTripMap returned nothing for '{city}'. Trying Geoapify API.")
+        places = search_geoapify_places(city)
+    
+    if not places:
+        # 3. Tertiary: Overpass (OpenStreetMap)
+        print(f"[Fallback] Geoapify returned nothing for '{city}'. Trying Overpass API.")
+        places = fetch_overpass_places(city)
+    
+    if not places:
+        # 4. Last resort: curated mock DB
+        print(f"[Fallback] Overpass returned nothing. Using mock DB for '{city}'.")
+        places = MOCK_PLACES_DB.get(city, [])
+
     scored_places = []
     
     for p in places:

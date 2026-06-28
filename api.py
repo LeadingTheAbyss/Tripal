@@ -143,11 +143,16 @@ def get_recommendations(preferences: dict):
     
     return get_ai_recommendations(passengers, total_budget, days, preference)
 
+from fastapi.responses import JSONResponse
+
 @app.get("/api/image")
 def get_place_image(q: str):
     from services.image_service import fetch_real_image
     url = fetch_real_image(q)
-    return {"url": url}
+    response = JSONResponse(content={"url": url})
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 import requests
 from typing import List, Dict, Any

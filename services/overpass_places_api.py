@@ -10,8 +10,8 @@ def fetch_overpass_places(city_name: str) -> List[Place]:
     # 1. First geocode the city using Nominatim
     lat, lon = None, None
     try:
-        nom_headers = {"User-Agent": "GhumiGhumiTravelApp/1.0 (test@example.com)"}
-        nom_res = requests.get(f"https://nominatim.openstreetmap.org/search?q={city_name}&format=json", headers=nom_headers, timeout=10)
+        nom_headers = {"User-Agent": "TripEasy/1.0 (TravelApp)"}
+        nom_res = requests.get(f"https://nominatim.openstreetmap.org/search?q={city_name} India&format=json", headers=nom_headers, timeout=10)
         if nom_res.ok and len(nom_res.json()) > 0:
             lat = nom_res.json()[0]["lat"]
             lon = nom_res.json()[0]["lon"]
@@ -47,9 +47,9 @@ def fetch_overpass_places(city_name: str) -> List[Place]:
     places = []
     try:
         headers = {
-            "User-Agent": "GhumiGhumiTravelApp/1.0 (test@example.com)"
+            "User-Agent": "TripEasy/2.0 (contact@tripeasy.app)"
         }
-        response = requests.post(endpoint, data={"data": query}, headers=headers, timeout=15)
+        response = requests.post(endpoint, data=query.encode('utf-8'), headers=headers, timeout=15)
         
         with open("overpass_debug.log", "w", encoding="utf-8") as f:
             f.write(f"Lat: {lat}, Lon: {lon}\n")
