@@ -5,7 +5,7 @@ import random
 from models.entities import TransportOption
 from models.enums import TransportType
 
-# Configure basic logging for the pipeline
+# Configure basic logging for the pipeline  
 logging.basicConfig(level=logging.INFO)
 
 def scrape_redbus_mobile(origin: str, destination: str, travel_date: str) -> List[dict]:

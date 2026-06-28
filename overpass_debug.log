@@ -1,8 +1,8 @@
 Lat: None, Lon: None
 Query: 
         [out:json][timeout:30];
-        area["name"="Lucknow"]->.a;
-        node["name"="Lucknow"]["place"]->.n;
+        area["name"="New Delhi"]->.a;
+        node["name"="New Delhi"]["place"]->.n;
         (
           node["tourism"~"attraction|museum|viewpoint|monument"](area.a);
           way["tourism"~"attraction|museum|viewpoint|monument"](area.a);

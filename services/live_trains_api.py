@@ -237,8 +237,10 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
                     provider=train_name
                 ))
                 
+        except requests.exceptions.RequestException:
+            print(f"[Warning] RailRadar API connection failed for {o_code}-{d_code}. Using fallback.")
         except Exception as e:
-            print(f"Error fetching live trains from RailRadar API for {o_code}-{d_code}: {e}")
+            print(f"[Error] Unexpected error in RailRadar API for {o_code}-{d_code}: {e}")
             
     if not options:
         return _get_fallback_trains(origin_city, dest_city, date)
