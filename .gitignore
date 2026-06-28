@@ -111,3 +111,9 @@ venv.bak/
 
 # Mac OS
 .DS_Store
+
+# Custom
+overpass_debug.log
+out.json
+scratch/
+test_*.py
