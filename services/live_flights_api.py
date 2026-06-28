@@ -7,6 +7,8 @@ import random
 from models.entities import TransportOption
 from models.enums import TransportType
 from services.dgca_pdf_parser import load_cached_flights
+from services.db import get_db_connection
+import uuid
 
 def _parse_days_of_operation(days_str: str) -> List[int]:
     """Parses a days of operation string into a list of Python weekday integers (0 = Mon, 6 = Sun)."""
@@ -31,7 +33,17 @@ def search_live_flights(origin_iata: str, dest_iata: str, date: str) -> List[Tra
         base_date = datetime.now()
         target_weekday = base_date.weekday()
         
-    cached_flights = load_cached_flights()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('SELECT flight_no, origin, dest, airline, freq, dep_time, arr_time FROM "Flight" WHERE origin = %s AND dest = %s', (origin_iata.upper(), dest_iata.upper()))
+        rows = cur.fetchall()
+        cached_flights = [{"flight_no": r[0], "origin": r[1], "dest": r[2], "airline": r[3], "freq": r[4], "dep_time": r[5], "arr_time": r[6]} for r in rows]
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[DB Error] Failed to fetch flights from NeonDB: {e}")
+        cached_flights = []
     
     for idx, flight in enumerate(cached_flights):
         if flight["origin"].upper() == origin_iata.upper() and flight["dest"].upper() == dest_iata.upper():
@@ -124,17 +136,22 @@ def search_live_flights(origin_iata: str, dest_iata: str, date: str) -> List[Tra
                     # De-duplicate
                     unique_flights = {f["flight_no"] + f["dep_time"]: f for f in new_flights}.values()
                     
-                    # Append to JSON
-                    cache_file = "data/parsed_flights.json"
-                    if os.path.exists(cache_file):
-                        with open(cache_file, "r") as f:
-                            all_flights = json.load(f)
-                    else:
-                        all_flights = []
-                        
-                    all_flights.extend(unique_flights)
-                    with open(cache_file, "w") as f:
-                        json.dump(all_flights, f, indent=4)
+                    # Insert into NeonDB
+                    try:
+                        conn = get_db_connection()
+                        cur = conn.cursor()
+                        for flight in unique_flights:
+                            flight_id = uuid.uuid4().hex
+                            cur.execute("""
+                                INSERT INTO "Flight" (id, flight_no, origin, dest, airline, freq, dep_time, arr_time)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (flight_no, origin, dest, dep_time, arr_time) DO NOTHING
+                            """, (flight_id, flight["flight_no"], flight["origin"], flight["dest"], flight["airline"], flight["freq"], flight["dep_time"], flight["arr_time"]))
+                        conn.commit()
+                        cur.close()
+                        conn.close()
+                    except Exception as e:
+                        print(f"[DB Error] Failed to insert fallback flights into NeonDB: {e}")
                         
                     # Now build TransportOptions for them directly
                     for idx, flight in enumerate(unique_flights):

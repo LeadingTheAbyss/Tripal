@@ -20,3 +20,16 @@ model PnrCache {
   data      Json
   updatedAt DateTime @updatedAt
 }
+
+model Flight {
+  id        String   @id @default(cuid())
+  flight_no String
+  origin    String
+  dest      String
+  airline   String
+  freq      String
+  dep_time  String
+  arr_time  String
+  
+  @@unique([flight_no, origin, dest, dep_time, arr_time])
+}
