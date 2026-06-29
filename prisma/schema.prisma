@@ -33,3 +33,45 @@ model Flight {
   
   @@unique([flight_no, origin, dest, dep_time, arr_time])
 }
+
+model Bus {
+  id        String   @id @default(cuid())
+  origin    String
+  dest      String
+  date      String
+  bus_name  String
+  timings   String
+  price     Float
+  
+  @@unique([origin, dest, date, bus_name, timings])
+}
+
+model Train {
+  id             String   @id @default(cuid())
+  train_num      String
+  train_name     String
+  origin         String
+  dest           String
+  date           String
+  dep_time       String
+  arr_time       String
+  duration_hours Float
+  price          Float
+  
+  @@unique([train_num, origin, dest, date])
+}
+
+model Hotel {
+  id              String   @id @default(cuid())
+  hotel_id        String
+  city            String
+  check_in_date   String
+  check_out_date  String
+  name            String
+  price           Float
+  rating          Float
+  lat             Float
+  lon             Float
+  
+  @@unique([hotel_id, city, check_in_date, check_out_date])
+}

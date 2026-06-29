@@ -17,40 +17,43 @@ A group of {num_pax} travelers want to take a trip.
 - Duration: {days} days (excluding travel days)
 - Primary preference: {preference} (e.g. mountains, beaches, heritage, desert, wildlife, spiritual)
 
-Recommend 12 destinations in India. 
-- The first 6 destinations MUST match their primary preference ("{preference}"). 
-- The other 6 destinations MUST be of different categories (e.g., if they like beaches, show mountains or heritage) to give them alternative options.
-For each destination, return this EXACT JSON structure inside an array:
-[
-  {{
-    "id": "slug_name",
-    "name": "Destination Name",
-    "state": "State Name",
-    "category": "mountains|beaches|heritage|desert|wildlife|spiritual|hills|any",
-    "tags": ["Tag1", "Tag2", "Tag3"],
-    "why": "A 1-2 sentence personal explanation referencing their cities and budget.",
-    "budgetEstimate": 18000,
-    "perPersonEstimate": 6000,
-    "matchScore": 92,
-    "isPrimaryMatch": true
-  }}
-]
+Recommend 6 destinations in India. 
+- The first 3 destinations MUST match their primary preference ("{preference}"). 
+- The other 3 destinations MUST be of different categories (e.g., if they like beaches, show mountains or heritage) to give them alternative options.
+
+Respond ONLY with a JSON object containing a "destinations" array, where each item matches this EXACT structure:
+{{
+  "destinations": [
+    {{
+      "id": "slug_name",
+      "name": "Destination Name",
+      "state": "State Name",
+      "category": "mountains|beaches|heritage|desert|wildlife|spiritual|hills|any",
+      "tags": ["Tag1", "Tag2", "Tag3"],
+      "why": "A 1-2 sentence personal explanation referencing their cities and budget.",
+      "budgetEstimate": 0,
+      "perPersonEstimate": 0,
+      "matchScore": 92,
+      "isPrimaryMatch": true
+    }}
+  ]
+}}
 
 Rules:
-- budgetEstimate MUST be the estimated total for all {num_pax} people for {days} days (transport + stay + food).
+- budgetEstimate MUST be a realistic calculated total cost in INR for ALL {num_pax} people for {days} days (including transport from {city_str}, stay, and food). Do NOT just copy 0 from the example! Provide a real number.
 - budgetEstimate MUST NOT exceed ₹{total_budget}.
+- perPersonEstimate MUST be mathematically equal to (budgetEstimate / {num_pax}).
 - matchScore is 0-100. Primary preference destinations score 80-100, others score 50-79.
 - isPrimaryMatch is true ONLY for destinations matching "{preference}".
-- Return EXACTLY 12 destinations.
-- CRITICAL: No markdown, no explanation, ONLY the JSON array. Output must start with '[' and end with ']'.
+- Return EXACTLY 6 destinations.
 """
 
 def call_ollama(prompt: str) -> str:
-    system_prompt = "You are an expert Indian travel planner. You must respond ONLY with a valid JSON array. Do not include markdown blocks like ```json."
+    system_prompt = "You are an expert Indian travel planner. Respond ONLY with valid JSON."
     
     try:
         res = requests.post("http://localhost:11434/api/generate", json={
-            "model": "qwen3:8b",
+            "model": "gemma2:2b",
             "prompt": f"{system_prompt}\n\n{prompt}",
             "stream": False,
             "options": {
@@ -61,7 +64,7 @@ def call_ollama(prompt: str) -> str:
         return res.json().get("response", "")
     except Exception as e:
         print(f"[Error] Ollama call failed: {e}")
-        return ""
+        return f"EXCEPTION: {str(e)}"
 
 def parse_response(raw: str) -> list:
     if not raw:
@@ -69,15 +72,21 @@ def parse_response(raw: str) -> list:
     
     # Attempt 1: Direct parsing
     try:
-        return json.loads(raw)
+        data = json.loads(raw)
+        if isinstance(data, dict) and "destinations" in data:
+            return data["destinations"]
+        elif isinstance(data, list):
+            return data
     except json.JSONDecodeError:
         pass
         
-    # Attempt 2: Extract JSON array using regex
+    # Attempt 2: Extract JSON object using regex
     try:
-        match = re.search(r'\[.*\]', raw, re.DOTALL)
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
         if match:
-            return json.loads(match.group(0))
+            data = json.loads(match.group(0))
+            if isinstance(data, dict) and "destinations" in data:
+                return data["destinations"]
     except json.JSONDecodeError:
         pass
         
@@ -92,6 +101,7 @@ def recommend(passengers: list, total_budget: int, days: int, preference: str) -
     
     # Fallback if Ollama fails or returns invalid response
     if not destinations or not isinstance(destinations, list):
+        error_details = raw_response[:300] if raw_response else "Empty response"
         return [
             {
                 "id": "fallback_error",
@@ -99,7 +109,7 @@ def recommend(passengers: list, total_budget: int, days: int, preference: str) -
                 "state": "N/A",
                 "category": preference,
                 "tags": ["Error"],
-                "why": "Ollama AI model failed to return a valid response. Please ensure Ollama is running with qwen3:8b model.",
+                "why": f"Ollama failed. Details: {error_details}",
                 "budgetEstimate": 0,
                 "perPersonEstimate": 0,
                 "matchScore": 0,
@@ -107,4 +117,16 @@ def recommend(passengers: list, total_budget: int, days: int, preference: str) -
             }
         ]
         
+    # Enforce correct math manually (LLMs often hallucinate basic division)
+    cities = [p for p in passengers if p.get("city")]
+    num_pax = len(cities) if cities else 1
+    
+    for dest in destinations:
+        if isinstance(dest, dict) and "budgetEstimate" in dest:
+            try:
+                dest["budgetEstimate"] = int(dest["budgetEstimate"])
+                dest["perPersonEstimate"] = dest["budgetEstimate"] // num_pax
+            except:
+                pass
+                
     return destinations

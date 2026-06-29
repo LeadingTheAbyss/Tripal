@@ -24,6 +24,9 @@ export default function TransportPage() {
   const [liveModalOpen, setLiveModalOpen] = useState(false);
   const [stationBoardOpen, setStationBoardOpen] = useState(false);
   const [activeTrainId, setActiveTrainId] = useState('');
+  
+  // Track active transport tab per passenger
+  const [activeTabs, setActiveTabs] = useState<Record<string, string>>({});
 
   // Fetch transport options for all passengers on mount
   useEffect(() => {
@@ -204,86 +207,119 @@ export default function TransportPage() {
                         <AlertCircle size={16} /> No transport options found for this route.
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        <AnimatePresence>
-                          {options.map((opt, idx) => {
-                            const isSelected = selectedTransportId === opt.id;
-                            const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
-
+                      <>
+                        {/* Horizontal Dropdowns / Tabs */}
+                        <div className="flex flex-wrap gap-3 mb-6">
+                          {['flight', 'train', 'bus', 'cab'].map((type) => {
+                            const count = options.filter(o => o.type === type || (type === 'cab' && o.type === 'car')).length;
+                            if (count === 0) return null;
+                            
+                            const isActive = (activeTabs[pax.id] || (pax.transportPreference !== 'any' ? pax.transportPreference : 'flight')) === type;
+                            
                             return (
-                              <motion.div 
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                key={opt.id}
-                                onClick={() => handleSelectTransport(pax.id, opt)}
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                                className={`
-                                  relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-colors
-                                  ${isSelected 
-                                    ? 'border-primary bg-primary/10 shadow-sm' 
-                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                  }
-                                `}
+                              <button
+                                key={type}
+                                onClick={() => setActiveTabs({ ...activeTabs, [pax.id]: type })}
+                                className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 border-2 transition-all ${
+                                  isActive 
+                                    ? 'bg-primary/10 border-primary text-primary shadow-sm' 
+                                    : 'bg-card border-border text-muted-foreground hover:border-primary/50 hover:bg-muted'
+                                }`}
                               >
-                                <div className="flex items-center gap-4">
-                                  {isSelected ? (
-                                    <CheckCircle2 className="text-primary" />
-                                  ) : (
-                                    <Circle className="text-muted-foreground/50" />
-                                  )}
-                                  
-                                  <div className="p-3 bg-background rounded-lg shadow-sm border border-border">
-                                    {getTransportIcon(opt.type)}
-                                  </div>
-
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-bold uppercase tracking-wider text-sm">{opt.provider || opt.type}</span>
-                                      {isRecommended && (
-                                        <span className="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 border border-yellow-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                          ★ RECOMMENDED
-                                        </span>
-                                      )}
-                                    </div>
-                                      <div className="text-sm text-muted-foreground mt-1">
-                                        {opt.departure} <ArrowRight className="inline mx-1" size={14}/> {opt.arrival} ({opt.duration})
-                                      </div>
-                                      
-                                      {opt.type === 'train' && opt.id.startsWith('tr_') && (
-                                        <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-                                          <button 
-                                            onClick={() => {
-                                              setActiveTrainId(opt.id.split('_')[1]);
-                                              setRouteModalOpen(true);
-                                            }}
-                                            className="text-xs font-semibold px-3 py-1.5 rounded-md bg-muted text-foreground hover:bg-primary hover:text-primary-foreground transition-colors border border-border"
-                                          >
-                                            View Route
-                                          </button>
-                                          <button 
-                                            onClick={() => {
-                                              setActiveTrainId(opt.id.split('_')[1]);
-                                              setLiveModalOpen(true);
-                                            }}
-                                            className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors border border-blue-500/20"
-                                          >
-                                            Live Status
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                </div>
-
-                                <div className="text-right">
-                                  <div className="text-xl font-bold text-foreground">₹{opt.price.toLocaleString()}</div>
-                                </div>
-                              </motion.div>
+                                {getTransportIcon(type)}
+                                <span className="capitalize">{type}s</span>
+                                <span className="bg-background text-xs px-2 py-0.5 rounded-full border border-border">
+                                  {count}
+                                </span>
+                              </button>
                             );
                           })}
-                        </AnimatePresence>
-                      </div>
+                        </div>
+
+                        <div className="space-y-3 min-h-[200px]">
+                          <AnimatePresence mode="popLayout">
+                            {options
+                              .filter(o => o.type === (activeTabs[pax.id] || (pax.transportPreference !== 'any' ? pax.transportPreference : 'flight')) || (activeTabs[pax.id] === 'cab' && o.type === 'car'))
+                              .map((opt, idx) => {
+                              const isSelected = selectedTransportId === opt.id;
+                              const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
+
+                              return (
+                                <motion.div 
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95 }}
+                                  transition={{ delay: idx * 0.05 }}
+                                  key={opt.id}
+                                  onClick={() => handleSelectTransport(pax.id, opt)}
+                                  whileHover={{ scale: 1.01 }}
+                                  whileTap={{ scale: 0.99 }}
+                                  className={`
+                                    relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-colors
+                                    ${isSelected 
+                                      ? 'border-primary bg-primary/10 shadow-sm' 
+                                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                    }
+                                  `}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    {isSelected ? (
+                                      <CheckCircle2 className="text-primary" />
+                                    ) : (
+                                      <Circle className="text-muted-foreground/50" />
+                                    )}
+                                    
+                                    <div className="p-3 bg-background rounded-lg shadow-sm border border-border">
+                                      {getTransportIcon(opt.type)}
+                                    </div>
+
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold uppercase tracking-wider text-sm">{opt.provider || opt.type}</span>
+                                        {isRecommended && (
+                                          <span className="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 border border-yellow-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                            ★ RECOMMENDED
+                                          </span>
+                                        )}
+                                      </div>
+                                        <div className="text-sm text-muted-foreground mt-1">
+                                          {opt.departure} <ArrowRight className="inline mx-1" size={14}/> {opt.arrival} ({opt.duration})
+                                        </div>
+                                        
+                                        {opt.type === 'train' && opt.id.startsWith('tr_') && (
+                                          <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                                            <button 
+                                              onClick={() => {
+                                                setActiveTrainId(opt.id.split('_')[1]);
+                                                setRouteModalOpen(true);
+                                              }}
+                                              className="text-xs font-semibold px-3 py-1.5 rounded-md bg-muted text-foreground hover:bg-primary hover:text-primary-foreground transition-colors border border-border"
+                                            >
+                                              View Route
+                                            </button>
+                                            <button 
+                                              onClick={() => {
+                                                setActiveTrainId(opt.id.split('_')[1]);
+                                                setLiveModalOpen(true);
+                                              }}
+                                              className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors border border-blue-500/20"
+                                            >
+                                              Live Status
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                  </div>
+
+                                  <div className="text-right">
+                                    <div className="text-xl font-bold text-foreground">₹{opt.price.toLocaleString()}</div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
+                        </div>
+                      </>
                     )}
                   </motion.section>
                 );

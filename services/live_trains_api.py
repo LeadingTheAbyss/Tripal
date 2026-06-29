@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from models.entities import TransportOption
 from models.enums import TransportType
+from services.db import get_db_connection
+import uuid
 
 load_dotenv(override=True)
 
@@ -118,6 +120,51 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
     # Strip any states from formatted names (e.g. "Lucknow, Uttar Pradesh" -> "Lucknow")
     clean_origin = origin_city.split(",")[0].strip()
     clean_dest = dest_city.split(",")[0].strip()
+    
+    # --- Check DB Cache ---
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS "Train" (
+                id VARCHAR(255) PRIMARY KEY,
+                train_num VARCHAR(255),
+                train_name VARCHAR(255),
+                origin VARCHAR(255),
+                dest VARCHAR(255),
+                date VARCHAR(255),
+                dep_time VARCHAR(255),
+                arr_time VARCHAR(255),
+                duration_hours DOUBLE PRECISION,
+                price DOUBLE PRECISION,
+                UNIQUE (train_num, origin, dest, date)
+            )
+        ''')
+        cur.execute('SELECT train_num, train_name, dep_time, arr_time, duration_hours, price FROM "Train" WHERE origin = %s AND dest = %s AND date = %s', 
+                   (clean_origin.upper(), clean_dest.upper(), date))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        if rows:
+            print("[Cache Hit] Returning trains from NeonDB.")
+            cached_options = []
+            for idx, r in enumerate(rows):
+                cached_options.append(TransportOption(
+                    id=f"tr_{r[0]}_{idx}_cached",
+                    type=TransportType.TRAIN,
+                    departure=datetime.fromisoformat(r[2]),
+                    arrival=datetime.fromisoformat(r[3]),
+                    duration_hours=float(r[4]),
+                    price=float(r[5]),
+                    safety_score=8,
+                    comfort_score=7,
+                    provider=r[1]
+                ))
+            return sorted(cached_options, key=lambda x: x.price)
+    except Exception as e:
+        print(f"[Warning] Train DB cache check failed: {e}")
+    # --- End DB Cache Check ---
     
     origin_code = get_station_code(clean_origin)
     dest_code = get_station_code(clean_dest)
@@ -244,6 +291,24 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
             
     if not options:
         return _get_fallback_trains(origin_city, dest_city, date)
+        
+    # --- Save to DB Cache ---
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        for opt in options:
+            train_num = opt.id.split("_")[1] if len(opt.id.split("_")) > 1 else "UNK"
+            train_id = uuid.uuid4().hex
+            cur.execute('''
+                INSERT INTO "Train" (id, train_num, train_name, origin, dest, date, dep_time, arr_time, duration_hours, price)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (train_num, origin, dest, date) DO NOTHING
+            ''', (train_id, train_num, opt.provider, clean_origin.upper(), clean_dest.upper(), date, opt.departure.isoformat(), opt.arrival.isoformat(), opt.duration_hours, opt.price))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[Warning] Failed to cache trains to DB: {e}")
         
     return sorted(options, key=lambda x: x.price)
 

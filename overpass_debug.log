@@ -1,25 +1,56 @@
-Lat: None, Lon: None
+Lat: 26.8381000, Lon: 80.9346001
 Query: 
         [out:json][timeout:30];
-        area["name"="New Delhi"]->.a;
-        node["name"="New Delhi"]["place"]->.n;
         (
-          node["tourism"~"attraction|museum|viewpoint|monument"](area.a);
-          way["tourism"~"attraction|museum|viewpoint|monument"](area.a);
-          node["tourism"~"attraction|museum|viewpoint|monument"](around.n:15000);
-          way["tourism"~"attraction|museum|viewpoint|monument"](around.n:15000);
+          node["tourism"~"attraction|museum|viewpoint|monument"](around:15000,26.8381000,80.9346001);
+          way["tourism"~"attraction|museum|viewpoint|monument"](around:15000,26.8381000,80.9346001);
         );
         out center;
         
-Response status: 406
-Response text: <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html><head>
-<title>406 Not Acceptable</title>
-</head><body>
-<h1>Not Acceptable</h1>
-<p>An appropriate representation of the requested resource could not be found on this server.</p>
-<hr>
-<address>Apache/2.4.67 (Debian) Server at overpass-api.de Port 443</address>
-</body></html>
+Response status: 200
+Response text: {
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-06-29T06:31:40Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
 
-Exception: 406 Client Error: Not Acceptable for url: https://overpass-api.de/api/interpreter
+{
+  "type": "node",
+  "id": 4731492121,
+  "lat": 26.8429071,
+  "lon": 81.0221519,
+  "tags": {
+    "addr:housenumber": "142A",
+    "addr:postcode": "226010",
+    "addr:street": "Khargapur Gomtinagar",
+    "email": "dharmpalsingh1160@gmail.com",
+    "name": "Sai Sadan 142A Kaushalpuri Colony",
+    "name:en": "Hindi",
+    "name:hi": "Sai Sadan 142A Kaushalpuri Colony",
+    "phone": "7607805441",
+    "tourism": "attraction"
+  }
+},
+{
+  "type": "node",
+  "id": 5338661622,
+  "lat": 26.8523340,
+  "lon": 80.9320508,
+  "tags": {
+    "name": "Safed Baradan",
+    "tourism": "attraction"
+  }
+},
+{
+  "type": "node",
+  "id": 5839453488,
+  "lat": 26.8609040,
+  "lon": 80.9258774,
+  "tags": {
+    "addr:postcode": "226001",
+    "ad
+Places parsed: 13
+Exception: HTTPSConnectionPool(host='overpass-api.de', port=443): Read timed out. (read timeout=15)
