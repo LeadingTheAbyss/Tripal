@@ -208,60 +208,75 @@ export default function TransportPage() {
                       </div>
                     ) : (
                       <>
-                        {/* Horizontal Dropdowns / Tabs */}
-                        <div className="flex flex-wrap gap-3 mb-6">
+                        {/* Accordion Sections for Transport Types */}
+                        <div className="space-y-4">
                           {['flight', 'train', 'bus', 'cab'].map((type) => {
-                            const count = options.filter(o => o.type === type || (type === 'cab' && o.type === 'car')).length;
-                            if (count === 0) return null;
+                            const typeOptions = options.filter(o => o.type === type || (type === 'cab' && o.type === 'car'));
+                            if (typeOptions.length === 0) return null;
                             
-                            const isActive = (activeTabs[pax.id] || (pax.transportPreference !== 'any' ? pax.transportPreference : 'flight')) === type;
+                            const currentActive = activeTabs[pax.id] ?? (pax.transportPreference !== 'any' ? pax.transportPreference : 'flight');
+                            const isActive = currentActive === type;
                             
                             return (
-                              <button
-                                key={type}
-                                onClick={() => setActiveTabs({ ...activeTabs, [pax.id]: type })}
-                                className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 border-2 transition-all ${
-                                  isActive 
-                                    ? 'bg-primary/10 border-primary text-primary shadow-sm' 
-                                    : 'bg-card border-border text-muted-foreground hover:border-primary/50 hover:bg-muted'
-                                }`}
-                              >
-                                {getTransportIcon(type)}
-                                <span className="capitalize">{type}s</span>
-                                <span className="bg-background text-xs px-2 py-0.5 rounded-full border border-border">
-                                  {count}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        <div className="space-y-3 min-h-[200px]">
-                          <AnimatePresence mode="popLayout">
-                            {options
-                              .filter(o => o.type === (activeTabs[pax.id] || (pax.transportPreference !== 'any' ? pax.transportPreference : 'flight')) || (activeTabs[pax.id] === 'cab' && o.type === 'car'))
-                              .map((opt, idx) => {
-                              const isSelected = selectedTransportId === opt.id;
-                              const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
-
-                              return (
-                                <motion.div 
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95 }}
-                                  transition={{ delay: idx * 0.05 }}
-                                  key={opt.id}
-                                  onClick={() => handleSelectTransport(pax.id, opt)}
-                                  whileHover={{ scale: 1.01 }}
-                                  whileTap={{ scale: 0.99 }}
-                                  className={`
-                                    relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-colors
-                                    ${isSelected 
-                                      ? 'border-primary bg-primary/10 shadow-sm' 
-                                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                    }
-                                  `}
+                              <div key={type} className="border-2 border-border rounded-xl overflow-hidden bg-card transition-all">
+                                {/* Accordion Header */}
+                                <button
+                                  onClick={() => setActiveTabs({ ...activeTabs, [pax.id]: isActive ? '' : type })}
+                                  className={`w-full px-6 py-4 flex items-center justify-between font-bold transition-colors ${
+                                    isActive 
+                                      ? 'bg-primary/10 text-primary' 
+                                      : 'hover:bg-muted/50 text-foreground'
+                                  }`}
                                 >
+                                  <div className="flex items-center gap-3">
+                                    {getTransportIcon(type)}
+                                    <span className="capitalize text-lg">{type === 'bus' ? 'buses' : `${type}s`}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="bg-background text-sm px-3 py-1 rounded-full border border-border">
+                                      {typeOptions.length} Options
+                                    </span>
+                                    <motion.div
+                                      animate={{ rotate: isActive ? 180 : 0 }}
+                                      className="text-muted-foreground"
+                                    >
+                                      ▼
+                                    </motion.div>
+                                  </div>
+                                </button>
+                                
+                                {/* Accordion Content */}
+                                <AnimatePresence initial={false}>
+                                  {isActive && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.3 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="p-4 space-y-3 bg-muted/20 border-t-2 border-border">
+                                        {typeOptions.map((opt, idx) => {
+                                          const isSelected = selectedTransportId === opt.id;
+                                          const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
+
+                                          return (
+                                            <motion.div 
+                                              initial={{ opacity: 0, x: -10 }}
+                                              animate={{ opacity: 1, x: 0 }}
+                                              transition={{ delay: idx * 0.05 }}
+                                              key={opt.id}
+                                              onClick={() => handleSelectTransport(pax.id, opt)}
+                                              whileHover={{ scale: 1.01 }}
+                                              whileTap={{ scale: 0.99 }}
+                                              className={`
+                                                relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-colors bg-card
+                                                ${isSelected 
+                                                  ? 'border-primary bg-primary/10 shadow-sm' 
+                                                  : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                                }
+                                              `}
+                                            >
                                   <div className="flex items-center gap-4">
                                     {isSelected ? (
                                       <CheckCircle2 className="text-primary" />
@@ -314,10 +329,16 @@ export default function TransportPage() {
                                   <div className="text-right">
                                     <div className="text-xl font-bold text-foreground">₹{opt.price.toLocaleString()}</div>
                                   </div>
-                                </motion.div>
-                              );
-                            })}
-                          </AnimatePresence>
+                                            </motion.div>
+                                          );
+                                        })}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            );
+                          })}
                         </div>
                       </>
                     )}

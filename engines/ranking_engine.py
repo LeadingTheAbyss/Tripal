@@ -50,22 +50,20 @@ from services.opentripmap_api import search_opentripmap_places
 from services.geoapify_api import search_geoapify_places
 
 def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
-    # 1. Primary: OpenTripMap API (5000 req/day free, proven Indian coverage)
-    places = search_opentripmap_places(city)
+    # 1. Primary: Overpass
+    places = fetch_overpass_places(city)
     
     if not places:
-        # 2. Secondary: Geoapify API
-        print(f"[Fallback] OpenTripMap returned nothing for '{city}'. Trying Geoapify API.")
+        # 2. Secondary: OpenTripMap
+        places = search_opentripmap_places(city)
+        
+    if not places:
+        # 3. Tertiary: Geoapify
         places = search_geoapify_places(city)
-    
-    if not places:
-        # 3. Tertiary: Overpass (OpenStreetMap)
-        print(f"[Fallback] Geoapify returned nothing for '{city}'. Trying Overpass API.")
-        places = fetch_overpass_places(city)
-    
+        
     if not places:
         # 4. Last resort: curated mock DB
-        print(f"[Fallback] Overpass returned nothing. Using mock DB for '{city}'.")
+        print(f"[Fallback] All APIs returned nothing. Using mock DB for '{city}'.")
         places = MOCK_PLACES_DB.get(city, [])
 
     scored_places = []
@@ -81,7 +79,7 @@ def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
         scored_places.append((score, p))
         
     scored_places.sort(key=lambda x: x[0], reverse=True)
-    return [p for s, p in scored_places]
+    return [p for s, p in scored_places][:40]
 
 def rank_hotels(city: str, trip: TripState) -> List[Hotel]:
     hotels = search_live_hotels(city, 
