@@ -12,6 +12,7 @@ import {
   Filter, SlidersHorizontal
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ImageOff } from 'lucide-react';
 import WikiImage from '@/components/WikiImage';
 
 function PlaceModal({ place, destination, isOpen, onClose, onToggle, isSelected }: {
@@ -91,8 +92,12 @@ function PlaceModal({ place, destination, isOpen, onClose, onToggle, isSelected 
         </button>
 
         {/* Hero Image */}
-        <div className="relative h-64 w-full shrink-0">
-          <WikiImage placeName={place.name} destination={destination} className="w-full h-full object-cover" />
+        <div className="relative h-64 w-full shrink-0 bg-zinc-800">
+          <WikiImage
+            placeName={place.name}
+            destination={destination}
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/20 to-transparent" />
           {/* Category pill overlaid on image */}
           <div className="absolute bottom-4 left-4">
@@ -395,7 +400,7 @@ export default function PlacesPage() {
                   }`}
                 >
                   {/* Image */}
-                  <div className="relative h-48 w-full overflow-hidden shrink-0">
+                  <div className="relative h-48 w-full overflow-hidden shrink-0 bg-zinc-800">
                     <WikiImage
                       placeName={place.name}
                       destination={trip.destination}
