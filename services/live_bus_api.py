@@ -3,7 +3,7 @@ from typing import List
 from datetime import datetime, timedelta
 import random
 import os
-import requests
+import httpx
 from models.entities import TransportOption
 from models.enums import TransportType
 from services.db import get_db_connection
@@ -12,36 +12,20 @@ import uuid
 # Configure basic logging for the pipeline  
 logging.basicConfig(level=logging.INFO)
 
-def fetch_redbus_api(origin: str, destination: str, travel_date: str) -> List[dict]:
+async def fetch_redbus_api(origin: str, destination: str, travel_date: str) -> List[dict]:
     """Strategy 1: Live redBus API via parse.bot"""
     logging.info("Attempting Strategy 1: Live redBus API via parse.bot")
     
     # Check DB Cache first
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS "Bus" (
-                id VARCHAR(255) PRIMARY KEY,
-                origin VARCHAR(255),
-                dest VARCHAR(255),
-                date VARCHAR(255),
-                bus_name VARCHAR(255),
-                timings VARCHAR(255),
-                price DOUBLE PRECISION,
-                UNIQUE (origin, dest, date, bus_name, timings)
-            )
-        ''')
-        cur.execute('SELECT bus_name, timings, price FROM "Bus" WHERE origin = %s AND dest = %s AND date = %s', 
-                   (origin.upper(), destination.upper(), travel_date))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
+        conn = await get_db_connection()
+        rows = await conn.fetch('SELECT bus_name, timings, price FROM "Bus" WHERE origin = $1 AND dest = $2 AND date = $3', origin.upper(), destination.upper(), travel_date)
+        await conn.close()
         
         if rows:
             logging.info("Returning cached bus data from DB.")
             return [
-                {"bus_name": r[0], "timings": r[1], "route": f"{origin} to {destination}", "price": r[2]} 
+                {"bus_name": r['bus_name'], "timings": r['timings'], "route": f"{origin} to {destination}", "price": r['price']} 
                 for r in rows
             ]
     except Exception as e:
@@ -54,41 +38,42 @@ def fetch_redbus_api(origin: str, destination: str, travel_date: str) -> List[di
     base_url = "https://api.parse.bot/scraper/35a9b6fe-4009-43dd-89e2-993f11b60ad0"
     headers = {"X-API-Key": api_key}
     
-    # Get origin city ID
-    orig_res = requests.get(f"{base_url}/get_city_suggestions", params={"limit": 1, "query": origin}, headers=headers, timeout=10)
-    orig_res.raise_for_status()
-    orig_data = orig_res.json()
-    orig_docs = orig_data.get("data", {}).get("docs", [])
-    if not orig_docs:
-        raise Exception(f"Origin city '{origin}' not found on redBus API.")
-    orig_id = orig_docs[0]["ID"]
+    async with httpx.AsyncClient() as client:
+        # Get origin city ID
+        orig_res = await client.get(f"{base_url}/get_city_suggestions", params={"limit": 1, "query": origin}, headers=headers, timeout=10.0)
+        orig_res.raise_for_status()
+        orig_data = orig_res.json()
+        orig_docs = orig_data.get("data", {}).get("docs", [])
+        if not orig_docs:
+            raise Exception(f"Origin city '{origin}' not found on redBus API.")
+        orig_id = orig_docs[0]["ID"]
 
-    # Get destination city ID
-    dest_res = requests.get(f"{base_url}/get_city_suggestions", params={"limit": 1, "query": destination}, headers=headers, timeout=10)
-    dest_res.raise_for_status()
-    dest_data = dest_res.json()
-    dest_docs = dest_data.get("data", {}).get("docs", [])
-    if not dest_docs:
-        raise Exception(f"Destination city '{destination}' not found on redBus API.")
-    dest_id = dest_docs[0]["ID"]
-    
-    # Format date: YYYY-MM-DD -> DD-Mon-YYYY
-    try:
-        parsed_date = datetime.strptime(travel_date, "%Y-%m-%d")
-        doj_str = parsed_date.strftime("%d-%b-%Y")
-    except ValueError:
-        doj_str = travel_date
+        # Get destination city ID
+        dest_res = await client.get(f"{base_url}/get_city_suggestions", params={"limit": 1, "query": destination}, headers=headers, timeout=10.0)
+        dest_res.raise_for_status()
+        dest_data = dest_res.json()
+        dest_docs = dest_data.get("data", {}).get("docs", [])
+        if not dest_docs:
+            raise Exception(f"Destination city '{destination}' not found on redBus API.")
+        dest_id = dest_docs[0]["ID"]
+        
+        # Format date: YYYY-MM-DD -> DD-Mon-YYYY
+        try:
+            parsed_date = datetime.strptime(travel_date, "%Y-%m-%d")
+            doj_str = parsed_date.strftime("%d-%b-%Y")
+        except ValueError:
+            doj_str = travel_date
 
-    # Fetch bus services
-    search_params = {
-        "from_city_id": orig_id,
-        "to_city_id": dest_id,
-        "doj": doj_str,
-        "limit": 15
-    }
-    search_res = requests.get(f"{base_url}/search_buses", params=search_params, headers=headers, timeout=15)
-    search_res.raise_for_status()
-    
+        # Fetch bus services
+        search_params = {
+            "from_city_id": orig_id,
+            "to_city_id": dest_id,
+            "doj": doj_str,
+            "limit": 15
+        }
+        search_res = await client.get(f"{base_url}/search_buses", params=search_params, headers=headers, timeout=15.0)
+        search_res.raise_for_status()
+        
     inventories = search_res.json().get("data", {}).get("inventories", [])
     if not inventories:
         logging.warning("No buses found on live API.")
@@ -151,24 +136,21 @@ def fetch_redbus_api(origin: str, destination: str, travel_date: str) -> List[di
     # Save to DB cache
     if results:
         try:
-            conn = get_db_connection()
-            cur = conn.cursor()
+            conn = await get_db_connection()
             for r in results:
                 bus_id = uuid.uuid4().hex
-                cur.execute('''
+                await conn.execute('''
                     INSERT INTO "Bus" (id, origin, dest, date, bus_name, timings, price)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
                     ON CONFLICT (origin, dest, date, bus_name, timings) DO NOTHING
-                ''', (bus_id, origin.upper(), destination.upper(), travel_date, r["bus_name"], r["timings"], r["price"]))
-            conn.commit()
-            cur.close()
-            conn.close()
+                ''', bus_id, origin.upper(), destination.upper(), travel_date, r["bus_name"], r["timings"], r["price"])
+            await conn.close()
         except Exception as e:
             logging.warning(f"Failed to cache bus data to DB: {e}")
             
     return results
 
-def scrape_redbus_mobile(origin: str, destination: str, travel_date: str) -> List[dict]:
+async def scrape_redbus_mobile(origin: str, destination: str, travel_date: str) -> List[dict]:
     # Strategy 2: Mobile Web Scraper (Backup 1)
     logging.info("Attempting Strategy 2: Mobile Web Scraper (Primary Private Aggregator)")
     if random.random() < 0.3:
@@ -179,7 +161,7 @@ def scrape_redbus_mobile(origin: str, destination: str, travel_date: str) -> Lis
         {"bus_name": "Zingbus (AC Sleeper)", "timings": "22:30 - 10:30", "route": f"{origin} to {destination}", "price": 1450}
     ]
 
-def scrape_abhibus_mobile(origin: str, destination: str, travel_date: str) -> List[dict]:
+async def scrape_abhibus_mobile(origin: str, destination: str, travel_date: str) -> List[dict]:
     # Strategy 3: Mobile Web Scraper (Backup 2)
     logging.info("Attempting Strategy 3: Mobile Web Scraper (Secondary Backup)")
     if random.random() < 0.3:
@@ -190,7 +172,7 @@ def scrape_abhibus_mobile(origin: str, destination: str, travel_date: str) -> Li
         {"bus_name": "VRL Travels (Non-AC)", "timings": "18:00 - 06:00", "route": f"{origin} to {destination}", "price": 850}
     ]
 
-def scrape_state_srtc(origin: str, destination: str, travel_date: str) -> List[dict]:
+async def scrape_state_srtc(origin: str, destination: str, travel_date: str) -> List[dict]:
     # Strategy 4: Regional State Transport (Final Fallback)
     logging.info("Attempting Strategy 4: Final Fallback (State SRTC Portal)")
     return [
@@ -205,7 +187,7 @@ def validate_payload(data: List[dict]) -> bool:
             return False
     return True
 
-def get_live_bus_data(origin: str, destination: str, travel_date: str) -> dict:
+async def get_live_bus_data(origin: str, destination: str, travel_date: str) -> dict:
     """The Multi-Source Redundancy Pipeline."""
     scraping_pipeline = [
         fetch_redbus_api,       # Strategy 1 (Live redBus API via parse.bot)
@@ -217,7 +199,7 @@ def get_live_bus_data(origin: str, destination: str, travel_date: str) -> dict:
     for scrape_strategy in scraping_pipeline:
         try:
             # Attempt to extract the 4 required fields
-            bus_listings = scrape_strategy(origin, destination, travel_date)
+            bus_listings = await scrape_strategy(origin, destination, travel_date)
             
             if bus_listings and validate_payload(bus_listings):
                 logging.info(f"Successfully retrieved live data using {scrape_strategy.__name__}")
@@ -235,11 +217,11 @@ def get_live_bus_data(origin: str, destination: str, travel_date: str) -> dict:
         "message": "All live scraping targets exhausted or blocked. Please retry."
     }
 
-def search_live_buses(origin_city: str, dest_city: str, date: str) -> List[TransportOption]:
+async def search_live_buses(origin_city: str, dest_city: str, date: str) -> List[TransportOption]:
     """Adapter to convert the pipeline payload into the app's standard TransportOption format."""
     print(f"\n[API Call] Executing Multi-Source Redundancy Pipeline for Buses: {origin_city} -> {dest_city}")
     
-    pipeline_result = get_live_bus_data(origin_city, dest_city, date)
+    pipeline_result = await get_live_bus_data(origin_city, dest_city, date)
     options = []
     
     if pipeline_result["status"] == "success":

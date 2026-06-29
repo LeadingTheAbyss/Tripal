@@ -11,25 +11,24 @@ from services.live_flights_api import search_live_flights
 from services.live_trains_api import search_live_trains
 from services.osrm_cab_api import search_live_cabs
 
-def rank_transport(source: str, dest: str, date: datetime, passengers: List[Passenger]) -> List[TransportOption]:
+async def rank_transport(source: str, dest: str, date: datetime, passengers: List[Passenger]) -> List[TransportOption]:
+    import asyncio
     # Simple IATA mapping for the simulation
     iata_map = {"Delhi": "DEL", "Mumbai": "BOM", "Goa": "GOI", "Lucknow": "LKO"}
     origin_iata = iata_map.get(source, "DEL")
     dest_iata = iata_map.get(dest, "GOI")
     
-    # 1. Fetch live flights
-    live_flights = search_live_flights(origin_iata, dest_iata, date.strftime("%Y-%m-%d"))
-    
-    # 2. Fetch live trains
-    live_trains = search_live_trains(source, dest, date.strftime("%Y-%m-%d"))
-
-    # 3. Fetch live cabs (by road)
-    live_cabs = search_live_cabs(source, dest, date.strftime("%Y-%m-%d"))
-    
-    # 4. Fetch live buses (Multi-source redundancy)
     from services.live_bus_api import search_live_buses
-    live_buses = search_live_buses(source, dest, date.strftime("%Y-%m-%d"))
+
+    # Fetch all options concurrently natively
+    results = await asyncio.gather(
+        search_live_flights(origin_iata, dest_iata, date.strftime("%Y-%m-%d")),
+        search_live_trains(source, dest, date.strftime("%Y-%m-%d")),
+        search_live_cabs(source, dest, date.strftime("%Y-%m-%d")),
+        search_live_buses(source, dest, date.strftime("%Y-%m-%d"))
+    )
     
+    live_flights, live_trains, live_cabs, live_buses = results
     transports = live_flights + live_trains + live_cabs + live_buses
     
     def transport_score(t: TransportOption):
@@ -81,8 +80,8 @@ def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
     scored_places.sort(key=lambda x: x[0], reverse=True)
     return [p for s, p in scored_places][:40]
 
-def rank_hotels(city: str, trip: TripState) -> List[Hotel]:
-    hotels = search_live_hotels(city, 
+async def rank_hotels(city: str, trip: TripState) -> List[Hotel]:
+    hotels = await search_live_hotels(city, 
                               trip.start_date.strftime("%Y-%m-%d"), 
                               trip.end_date.strftime("%Y-%m-%d"))
     

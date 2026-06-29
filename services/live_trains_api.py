@@ -1,5 +1,5 @@
 import os
-import requests
+import httpx
 import time
 from collections import deque
 from typing import List
@@ -59,7 +59,7 @@ STATION_CLUSTERS = {
     "Lucknow": ["LKO", "LJN"]
 }
 
-def get_station_code(city_name: str) -> str:
+async def get_station_code(city_name: str) -> str:
     # First check our fast-path dict
     if city_name in CITY_TO_STATION:
         return CITY_TO_STATION[city_name]
@@ -74,9 +74,9 @@ def get_station_code(city_name: str) -> str:
     if not os.path.exists(stations_file):
         try:
             print(f"Downloading stations database for dynamic lookup...")
-            # We use a short timeout so we don't block forever
-            res = requests.get("https://raw.githubusercontent.com/datameet/railways/master/stations.json", timeout=10)
-            res.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                res = await client.get("https://raw.githubusercontent.com/datameet/railways/master/stations.json", timeout=10.0)
+                res.raise_for_status()
             os.makedirs("data", exist_ok=True)
             with open(stations_file, 'w', encoding='utf-8') as f:
                 f.write(res.text)
@@ -114,7 +114,7 @@ def get_station_code(city_name: str) -> str:
     return None
 
 
-def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[TransportOption]:
+async def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[TransportOption]:
     print(f"\n[API Call] Fetching live trains (via IRCTC RapidAPI): {origin_city} -> {dest_city} on {date}...")
     
     # Strip any states from formatted names (e.g. "Lucknow, Uttar Pradesh" -> "Lucknow")
@@ -123,51 +123,32 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
     
     # --- Check DB Cache ---
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS "Train" (
-                id VARCHAR(255) PRIMARY KEY,
-                train_num VARCHAR(255),
-                train_name VARCHAR(255),
-                origin VARCHAR(255),
-                dest VARCHAR(255),
-                date VARCHAR(255),
-                dep_time VARCHAR(255),
-                arr_time VARCHAR(255),
-                duration_hours DOUBLE PRECISION,
-                price DOUBLE PRECISION,
-                UNIQUE (train_num, origin, dest, date)
-            )
-        ''')
-        cur.execute('SELECT train_num, train_name, dep_time, arr_time, duration_hours, price FROM "Train" WHERE origin = %s AND dest = %s AND date = %s', 
-                   (clean_origin.upper(), clean_dest.upper(), date))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
+        conn = await get_db_connection()
+        rows = await conn.fetch('SELECT train_num, train_name, dep_time, arr_time, duration_hours, price FROM "Train" WHERE origin = $1 AND dest = $2 AND date = $3', clean_origin.upper(), clean_dest.upper(), date)
+        await conn.close()
         
         if rows:
             print("[Cache Hit] Returning trains from NeonDB.")
             cached_options = []
             for idx, r in enumerate(rows):
                 cached_options.append(TransportOption(
-                    id=f"tr_{r[0]}_{idx}_cached",
+                    id=f"tr_{r['train_num']}_{idx}_cached",
                     type=TransportType.TRAIN,
-                    departure=datetime.fromisoformat(r[2]),
-                    arrival=datetime.fromisoformat(r[3]),
-                    duration_hours=float(r[4]),
-                    price=float(r[5]),
+                    departure=datetime.fromisoformat(r['dep_time']),
+                    arrival=datetime.fromisoformat(r['arr_time']),
+                    duration_hours=float(r['duration_hours']),
+                    price=float(r['price']),
                     safety_score=8,
                     comfort_score=7,
-                    provider=r[1]
+                    provider=r['train_name']
                 ))
             return sorted(cached_options, key=lambda x: x.price)
     except Exception as e:
         print(f"[Warning] Train DB cache check failed: {e}")
     # --- End DB Cache Check ---
     
-    origin_code = get_station_code(clean_origin)
-    dest_code = get_station_code(clean_dest)
+    origin_code = await get_station_code(clean_origin)
+    dest_code = await get_station_code(clean_dest)
     
     if not origin_code or not dest_code:
         print(f"[Warning] Could not dynamically map {clean_origin} or {clean_dest} to a station code.")
@@ -212,79 +193,80 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
         }
 
         try:
-            response = requests.get(url, headers=headers, timeout=15)
-            response.raise_for_status()
-            json_resp = response.json()
-            
-            if not json_resp.get("success"):
-                continue
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers, timeout=15.0)
+                response.raise_for_status()
+                json_resp = response.json()
                 
-            data_obj = json_resp.get("data", {})
-            if isinstance(data_obj, list):
-                train_list = data_obj
-            else:
-                train_list = data_obj.get("trains", [])
-            
-            for idx, train_obj in enumerate(train_list):
-                train_info = train_obj.get("train", {})
-                from_info = train_obj.get("from", {})
-                to_info = train_obj.get("to", {})
-
-                train_num = train_info.get("number", f"T{idx}")
-                train_name = train_info.get("name", f"Train {train_num}")
-                
-                if train_name in seen_trains:
+                if not json_resp.get("success"):
                     continue
-                seen_trains.add(train_name)
+                    
+                data_obj = json_resp.get("data", {})
+                if isinstance(data_obj, list):
+                    train_list = data_obj
+                else:
+                    train_list = data_obj.get("trains", [])
                 
-                if len(options) >= 20: # Expanded max limit since we're clustering
-                    break
+                for idx, train_obj in enumerate(train_list):
+                    train_info = train_obj.get("train", {})
+                    from_info = train_obj.get("from", {})
+                    to_info = train_obj.get("to", {})
+
+                    train_num = train_info.get("number", f"T{idx}")
+                    train_name = train_info.get("name", f"Train {train_num}")
                     
-                dep_time_str = from_info.get("departure", "08:00")
-                arr_time_str = to_info.get("arrival", "20:00")
-                
-                try:
-                    base_date = datetime.strptime(date, "%Y-%m-%d")
-                    dep_hour, dep_minute = map(int, dep_time_str.split(":"))
-                    dep_time = base_date.replace(hour=dep_hour, minute=dep_minute)
+                    if train_name in seen_trains:
+                        continue
+                    seen_trains.add(train_name)
                     
-                    arr_hour, arr_minute = map(int, arr_time_str.split(":"))
-                    arr_time = base_date.replace(hour=arr_hour, minute=arr_minute)
-                    
-                    from_day = int(from_info.get("day", 1))
-                    to_day = int(to_info.get("day", 1))
-                    
-                    if to_day > from_day or arr_time < dep_time:
-                        days_diff = max(to_day - from_day, 1)
-                        arr_time += timedelta(days=days_diff)
+                    if len(options) >= 20: # Expanded max limit since we're clustering
+                        break
                         
-                    duration_hours = (arr_time - dep_time).total_seconds() / 3600.0
+                    dep_time_str = from_info.get("departure", "08:00")
+                    arr_time_str = to_info.get("arrival", "20:00")
                     
-                    api_duration = train_obj.get("duration")
-                    if api_duration:
-                        duration_hours = float(api_duration) / 60.0
+                    try:
+                        base_date = datetime.strptime(date, "%Y-%m-%d")
+                        dep_hour, dep_minute = map(int, dep_time_str.split(":"))
+                        dep_time = base_date.replace(hour=dep_hour, minute=dep_minute)
                         
-                except Exception:
-                    base_date = datetime.strptime(date, "%Y-%m-%d")
-                    dep_time = base_date.replace(hour=8 + idx)
-                    duration_hours = 14.0
-                    arr_time = dep_time + timedelta(hours=duration_hours)
-                
-                price = round(500 + (duration_hours * 80))
-                
-                options.append(TransportOption(
-                    id=f"tr_{train_num}_{len(options)}",
-                    type=TransportType.TRAIN,
-                    departure=dep_time,
-                    arrival=arr_time,
-                    duration_hours=round(duration_hours, 1),
-                    price=float(price), 
-                    safety_score=8,
-                    comfort_score=7,
-                    provider=train_name
-                ))
-                
-        except requests.exceptions.RequestException:
+                        arr_hour, arr_minute = map(int, arr_time_str.split(":"))
+                        arr_time = base_date.replace(hour=arr_hour, minute=arr_minute)
+                        
+                        from_day = int(from_info.get("day", 1))
+                        to_day = int(to_info.get("day", 1))
+                        
+                        if to_day > from_day or arr_time < dep_time:
+                            days_diff = max(to_day - from_day, 1)
+                            arr_time += timedelta(days=days_diff)
+                            
+                        duration_hours = (arr_time - dep_time).total_seconds() / 3600.0
+                        
+                        api_duration = train_obj.get("duration")
+                        if api_duration:
+                            duration_hours = float(api_duration) / 60.0
+                            
+                    except Exception:
+                        base_date = datetime.strptime(date, "%Y-%m-%d")
+                        dep_time = base_date.replace(hour=8 + idx)
+                        duration_hours = 14.0
+                        arr_time = dep_time + timedelta(hours=duration_hours)
+                    
+                    price = round(500 + (duration_hours * 80))
+                    
+                    options.append(TransportOption(
+                        id=f"tr_{train_num}_{len(options)}",
+                        type=TransportType.TRAIN,
+                        departure=dep_time,
+                        arrival=arr_time,
+                        duration_hours=round(duration_hours, 1),
+                        price=float(price), 
+                        safety_score=8,
+                        comfort_score=7,
+                        provider=train_name
+                    ))
+                    
+        except httpx.RequestError:
             print(f"[Warning] RailRadar API connection failed for {o_code}-{d_code}. Using fallback.")
         except Exception as e:
             print(f"[Error] Unexpected error in RailRadar API for {o_code}-{d_code}: {e}")
@@ -294,19 +276,16 @@ def search_live_trains(origin_city: str, dest_city: str, date: str) -> List[Tran
         
     # --- Save to DB Cache ---
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
+        conn = await get_db_connection()
         for opt in options:
             train_num = opt.id.split("_")[1] if len(opt.id.split("_")) > 1 else "UNK"
             train_id = uuid.uuid4().hex
-            cur.execute('''
+            await conn.execute('''
                 INSERT INTO "Train" (id, train_num, train_name, origin, dest, date, dep_time, arr_time, duration_hours, price)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 ON CONFLICT (train_num, origin, dest, date) DO NOTHING
-            ''', (train_id, train_num, opt.provider, clean_origin.upper(), clean_dest.upper(), date, opt.departure.isoformat(), opt.arrival.isoformat(), opt.duration_hours, opt.price))
-        conn.commit()
-        cur.close()
-        conn.close()
+            ''', train_id, train_num, opt.provider, clean_origin.upper(), clean_dest.upper(), date, opt.departure.isoformat(), opt.arrival.isoformat(), opt.duration_hours, opt.price)
+        await conn.close()
     except Exception as e:
         print(f"[Warning] Failed to cache trains to DB: {e}")
         
@@ -319,31 +298,33 @@ def _get_fallback_trains(source, dest, date_str):
         TransportOption(id="t2_fallback", type=TransportType.TRAIN, departure=d.replace(hour=18), arrival=d+timedelta(days=1, hours=8), duration_hours=14.0, price=1500, safety_score=8, comfort_score=6, provider="Shatabdi Express (Fallback)"),
     ]
 
-def get_train_route(train_number: str):
+async def get_train_route(train_number: str):
     """Fetches the full timetable (stops) of a specific train from RailRadar."""
     api_key = os.getenv("RAILRADAR_API_KEY")
     if not api_key: return {"error": "API key missing"}
     
     url = f"https://api.railradar.in/v1/trains/{train_number}"
     try:
-        res = requests.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=10)
-        return res.json()
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=10.0)
+            return res.json()
     except Exception as e:
         return {"error": str(e)}
 
-def get_live_train_status(train_number: str, date: str):
+async def get_live_train_status(train_number: str, date: str):
     """Fetches the real-time position and delay of a running train."""
     api_key = os.getenv("RAILRADAR_API_KEY")
     if not api_key: return {"error": "API key missing"}
     
     url = f"https://api.railradar.in/v1/trains/{train_number}/live?date={date}"
     try:
-        res = requests.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=10)
-        return res.json()
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=10.0)
+            return res.json()
     except Exception as e:
         return {"error": str(e)}
 
-def get_station_board(station_code: str):
+async def get_station_board(station_code: str):
     """Fetches the live arrivals/departures board for a station in the next 4 hours."""
     api_key = os.getenv("RAILRADAR_API_KEY")
     if not api_key: return {"error": "API key missing"}
@@ -353,7 +334,8 @@ def get_station_board(station_code: str):
     
     url = f"https://api.railradar.in/v1/stations/{code}/trains"
     try:
-        res = requests.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=10)
-        return res.json()
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=10.0)
+            return res.json()
     except Exception as e:
         return {"error": str(e)}

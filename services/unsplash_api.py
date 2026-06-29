@@ -1,6 +1,6 @@
 import os
-import requests
-import threading
+import httpx
+import asyncio
 from typing import Optional
 
 try:
@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 # Allow max 2 simultaneous requests
-UNSPLASH_SEMAPHORE = threading.Semaphore(2)
+UNSPLASH_SEMAPHORE = asyncio.Semaphore(2)
 
 def _get_unsplash_key() -> Optional[str]:
     key = os.getenv("UNSPLASH_API_KEY")
@@ -18,7 +18,7 @@ def _get_unsplash_key() -> Optional[str]:
         return None
     return key
 
-def fetch_unsplash_image(query: str) -> Optional[str]:
+async def fetch_unsplash_image(query: str) -> Optional[str]:
     api_key = _get_unsplash_key()
     if not api_key:
         print("[Unsplash] No API key found. Fallback to Wikimedia.")
@@ -28,7 +28,7 @@ def fetch_unsplash_image(query: str) -> Optional[str]:
     parts = query.split()
     search_q = " ".join(parts[:-1]) if len(parts) > 1 else query
     
-    def _search(q_str):
+    async def _search(q_str):
         try:
             url = "https://api.unsplash.com/search/photos"
             params = {
@@ -38,14 +38,15 @@ def fetch_unsplash_image(query: str) -> Optional[str]:
                 "per_page": 3
             }
             
-            with UNSPLASH_SEMAPHORE:
-                res = requests.get(url, params=params, timeout=5)
-                # If rate limit exceeded (403/429), just return None
-                if res.status_code in [403, 429]:
-                    print(f"[Unsplash] Rate limit hit.")
-                    return None
-                res.raise_for_status()
-                data = res.json()
+            async with UNSPLASH_SEMAPHORE:
+                async with httpx.AsyncClient() as client:
+                    res = await client.get(url, params=params, timeout=5.0)
+                    # If rate limit exceeded (403/429), just return None
+                    if res.status_code in [403, 429]:
+                        print(f"[Unsplash] Rate limit hit.")
+                        return None
+                    res.raise_for_status()
+                    data = res.json()
                 
             results = data.get("results", [])
             if results:
@@ -58,10 +59,10 @@ def fetch_unsplash_image(query: str) -> Optional[str]:
             return None
 
     # Try full query first
-    url = _search(query)
+    url = await _search(query)
     if url:
         return url
         
     # Fallback to simplified query
-    url = _search(search_q)
+    url = await _search(search_q)
     return url

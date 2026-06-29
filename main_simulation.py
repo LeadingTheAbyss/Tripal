@@ -1,4 +1,5 @@
 from datetime import datetime
+import asyncio
 from models.entities import Passenger
 from models.state import TripState
 from services.geo_service import geo_lookup
@@ -7,7 +8,7 @@ from engines.ranking_engine import rank_transport, rank_places, rank_hotels
 from engines.optimizer import generate_itinerary, move_place
 from services.live_places_api import fetch_live_bonus_places
 
-def run_simulation():
+async def run_simulation():
     print("--- 🚀 BUDGETED TRAVEL SIMULATION (PRO) ---")
 
     # 1. Identity & Setup
@@ -29,13 +30,13 @@ def run_simulation():
     print(f"\n[2] Weather Forecast: {weather.value}")
 
     # 3. Transport Engine (Notices elderly passenger, avoids bus)
-    transports = rank_transport(trip.source_city, trip.destination_city, trip.start_date, trip.passengers)
+    transports = await rank_transport(trip.source_city, trip.destination_city, trip.start_date, trip.passengers)
     t_sel = transports[0]
     trip.transport_spend += t_sel.price * len(trip.passengers)
     print(f"\n[3] Selected Transport: {t_sel.type.value} (Safety: {t_sel.safety_score}). \n💰 Remaining Budget: ₹{trip.remaining_budget}")
 
     # 4. Hotel Engine (Using Live API)
-    hotels = rank_hotels(trip.destination_city, trip)
+    hotels = await rank_hotels(trip.destination_city, trip)
     h_sel = hotels[0]
     trip.hotel_spend += h_sel.price_per_night * trip.days
     print(f"\n[4] Selected Hotel: {h_sel.name} (Rating: {h_sel.rating}). \n💰 Remaining Budget: ₹{trip.remaining_budget}")
@@ -76,4 +77,4 @@ def run_simulation():
 
 
 if __name__ == "__main__":
-    run_simulation()
+    asyncio.run(run_simulation())

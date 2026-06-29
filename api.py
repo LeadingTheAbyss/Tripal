@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
@@ -19,26 +20,26 @@ app.add_middleware(
 )
 
 @app.get("/api/pincode/{pincode}")
-def get_pincode(pincode: str):
-    return geo_lookup(pincode)
+async def get_pincode(pincode: str):
+    return await asyncio.to_thread(geo_lookup, pincode)
 
 @app.get("/api/test-import")
-def test_import():
+async def test_import():
     from services.live_places_api import search_live_places
     import traceback
     try:
-        res = search_live_places("New Delhi")
+        res = await asyncio.to_thread(search_live_places, "New Delhi")
         return {"count": len(res), "places": [p.name for p in res]}
     except Exception as e:
         return {"error": str(e), "trace": traceback.format_exc()}
 
 @app.get("/api/transport")
-def get_transport(source: str, destination: str):
+async def get_transport(source: str, destination: str):
     # Dummy passenger to satisfy backend requirements
     p1 = Passenger(id="1", name="Dummy", age=25, gender="M", pincode="110001", city=source)
     date = datetime.now() + timedelta(days=10)
     
-    options = rank_transport(source, destination, date, [p1])
+    options = await rank_transport(source, destination, date, [p1])
     
     result = []
     for i, o in enumerate(options):
@@ -64,26 +65,31 @@ def get_transport(source: str, destination: str):
 from services.live_trains_api import get_train_route, get_live_train_status, get_station_board
 
 @app.get("/api/trains/{train_number}/route")
-def api_get_train_route(train_number: str):
-    return get_train_route(train_number)
+async def api_get_train_route(train_number: str):
+    return await asyncio.to_thread(get_train_route, train_number)
 
 @app.get("/api/trains/{train_number}/live")
-def api_get_live_train_status(train_number: str, date: str):
-    return get_live_train_status(train_number, date)
+async def api_get_live_train_status(train_number: str, date: str):
+    return await asyncio.to_thread(get_live_train_status, train_number, date)
 
 @app.get("/api/stations/{station_code}/board")
-def api_get_station_board(station_code: str):
-    return get_station_board(station_code)
+async def api_get_station_board(station_code: str):
+    return await asyncio.to_thread(get_station_board, station_code)
 
 @app.get("/api/places")
-def get_places(destination: str):
+async def get_places(destination: str):
     trip = TripState(
         trip_id="T1", mode="direct", passengers=[],
         source_city="Delhi", destination_city=destination,
         start_date=datetime.now(), end_date=datetime.now() + timedelta(days=3),
         total_budget=50000
     )
-    places = rank_places(destination, trip, Weather.SUNNY)
+    places = await asyncio.to_thread(rank_places, destination, trip, Weather.SUNNY)
+    
+    from services.image_service import fetch_real_image
+    # Fetch images concurrently
+    image_tasks = [fetch_real_image(f"{p.name} {destination}") for p in places]
+    image_urls = await asyncio.gather(*image_tasks)
     
     result = []
     for i, p in enumerate(places):
@@ -97,25 +103,26 @@ def get_places(destination: str):
             "safetyScore": p.safety_score_base,
             "weatherScore": 8,
             "crowdScore": p.crowd_estimate.value,
-            "recommendationScore": 90 - i
+            "recommendationScore": 90 - i,
+            "imageUrl": image_urls[i]
         })
     return result
 
 from services.live_places_api import fetch_live_reviews
 
 @app.get("/api/places/reviews")
-def get_place_reviews(location_id: str):
-    return fetch_live_reviews(location_id)
+async def get_place_reviews(location_id: str):
+    return await asyncio.to_thread(fetch_live_reviews, location_id)
 
 @app.get("/api/hotels")
-def get_hotels(destination: str):
+async def get_hotels(destination: str):
     trip = TripState(
         trip_id="T1", mode="direct", passengers=[],
         source_city="Delhi", destination_city=destination,
         start_date=datetime.now(), end_date=datetime.now() + timedelta(days=3),
         total_budget=50000
     )
-    hotels = rank_hotels(destination, trip)
+    hotels = await rank_hotels(destination, trip)
     
     result = []
     for i, h in enumerate(hotels):
@@ -134,20 +141,20 @@ def get_hotels(destination: str):
 from engines.ollama_engine import recommend as get_ai_recommendations
 
 @app.post("/api/recommendations")
-def get_recommendations(preferences: dict):
+async def get_recommendations(preferences: dict):
     passengers = preferences.get("passengers", [])
     total_budget = preferences.get("total_budget", 50000)
     days = preferences.get("days", 3)
     preference = preferences.get("preference", "any")
     
-    return get_ai_recommendations(passengers, total_budget, days, preference)
+    return await asyncio.to_thread(get_ai_recommendations, passengers, total_budget, days, preference)
 
 from fastapi.responses import JSONResponse
 
 @app.get("/api/image")
-def get_place_image(q: str):
+async def get_place_image(q: str):
     from services.image_service import fetch_real_image
-    url = fetch_real_image(q)
+    url = await fetch_real_image(q)
     response = JSONResponse(content={"url": url})
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -156,11 +163,7 @@ def get_place_image(q: str):
 import requests
 from typing import List, Dict, Any
 
-@app.get("/api/search-city")
-def search_city(q: str = "") -> List[Dict[str, Any]]:
-    """
-    Handles location autocomplete queries using the free Photon API with a local fallback.
-    """
+def _fetch_photon_cities(q: str) -> List[Dict[str, Any]]:
     if not q or len(q) < 2:
         return []
 
@@ -238,10 +241,13 @@ def search_city(q: str = "") -> List[Dict[str, Any]]:
                 "osrm_coords": c["osrm_coords"]
             } for c in matched_cities]
             
-        # Return graceful failure if no fallback matches
         return [{
             "name": f"Error: Network issue",
             "state": "API Error",
             "formatted_name": f"Error: Connection to mapping service failed",
             "osrm_coords": ""
         }]
+
+@app.get("/api/search-city")
+async def search_city(q: str = "") -> List[Dict[str, Any]]:
+    return await asyncio.to_thread(_fetch_photon_cities, q)
