@@ -123,8 +123,8 @@ export default function TransportPage() {
   
   // Local state to store fetched options per passenger
   const [transportMap, setTransportMap] = useState<Record<string, TransportOption[]>>({});
-  const [loading, setLoading] = useState(true);
-  const [backendFinished, setBackendFinished] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [backendFinished, setBackendFinished] = useState(true);
   const [sortBy, setSortBy] = useState<'recommended' | 'cheapest' | 'fastest' | 'earliest'>('recommended');
 
   const [routeModalOpen, setRouteModalOpen] = useState(false);
@@ -134,29 +134,31 @@ export default function TransportPage() {
   
   // Track active transport tab per passenger
   const [activeTabs, setActiveTabs] = useState<Record<string, string>>({});
+  
+  // Track lazy loading states
+  const [fetchedModes, setFetchedModes] = useState<Record<string, boolean>>({});
+  const [loadingMode, setLoadingMode] = useState<Record<string, boolean>>({});
 
-  // Fetch transport options for all passengers on mount
-  useEffect(() => {
-    const fetchAllTransport = async () => {
-      setLoading(true);
-      const newMap: Record<string, TransportOption[]> = {};
-      
-      for (const pax of trip.passengers) {
-        if (!pax.city) continue; // Skip if no origin city
-        const options = await api.getTransportOptions(pax.city, trip.destination);
-        newMap[pax.id] = options;
-      }
-      
-      setTransportMap(newMap);
-      setBackendFinished(true);
-    };
+  const handleAccordionClick = async (pax: Passenger, type: string) => {
+    const key = `${pax.id}-${type}`;
+    const isActive = activeTabs[pax.id] === type;
 
-    if (trip.passengers.length > 0 && trip.destination) {
-      fetchAllTransport();
+    if (!fetchedModes[key] && !loadingMode[key]) {
+      setLoadingMode(prev => ({ ...prev, [key]: true }));
+      setActiveTabs({ ...activeTabs, [pax.id]: type });
+      
+      const options = await api.getTransportOptions(pax.city, trip.destination, type);
+      
+      setTransportMap(prev => {
+        const current = prev[pax.id] || [];
+        return { ...prev, [pax.id]: [...current, ...options] };
+      });
+      setFetchedModes(prev => ({ ...prev, [key]: true }));
+      setLoadingMode(prev => ({ ...prev, [key]: false }));
     } else {
-      setBackendFinished(true);
+      setActiveTabs({ ...activeTabs, [pax.id]: isActive ? '' : type });
     }
-  }, [trip.passengers, trip.destination]);
+  };
 
   // Handle transport selection
   const handleSelectTransport = (paxId: string, option: TransportOption) => {
@@ -308,63 +310,66 @@ export default function TransportPage() {
                       )}
                     </div>
 
-                    {options.length === 0 ? (
-                      <div className="text-muted-foreground text-sm flex items-center gap-2">
-                        <AlertCircle size={16} /> No transport options found for this route.
-                      </div>
-                    ) : (
-                      <>
-                        {/* Accordion Sections for Transport Types */}
-                        <div className="space-y-4">
-                          {['flight', 'train', 'bus', 'cab'].map((type) => {
-                            const typeOptions = options.filter(o => o.type === type || (type === 'cab' && o.type === 'car'));
+                    {/* Accordion Sections for Transport Types */}
+                    <div className="space-y-4">
+                      {['flight', 'train', 'bus', 'cab'].map((type) => {
+                        const key = `${pax.id}-${type}`;
+                        const isFetched = fetchedModes[key];
+                        const isLoading = loadingMode[key];
+
+                        const typeOptions = options.filter(o => o.type === type || (type === 'cab' && o.type === 'car'));
+                        
+                        const currentActive = activeTabs[pax.id] ?? '';
+                        const isActive = currentActive === type && (isFetched ? typeOptions.length > 0 : true);
+                        
+                        return (
+                          <div key={type} className={`border-2 border-border rounded-xl overflow-hidden bg-card transition-all ${isFetched && typeOptions.length === 0 ? 'opacity-60' : ''}`}>
+                            {/* Accordion Header */}
+                            <button
+                              onClick={() => handleAccordionClick(pax, type)}
+                              disabled={isFetched && typeOptions.length === 0}
+                              className={`w-full px-6 py-4 flex items-center justify-between font-bold transition-colors ${
+                                isActive 
+                                  ? 'bg-primary/10 text-primary' 
+                                  : (isFetched && typeOptions.length === 0 ? 'bg-muted/30 text-muted-foreground cursor-not-allowed' : 'hover:bg-muted/50 text-foreground')
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                {getTransportIcon(type)}
+                                <span className="capitalize text-lg">{type === 'bus' ? 'buses' : `${type}s`}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className={`text-sm px-3 py-1 rounded-full border ${isFetched && typeOptions.length === 0 ? 'bg-muted/50 border-transparent text-muted-foreground' : 'bg-background border-border'} ${isLoading ? 'animate-pulse text-primary' : ''}`}>
+                                  {isLoading ? 'Searching...' : (!isFetched ? 'Click to search' : (typeOptions.length === 0 ? `No ${type === 'bus' ? 'buses' : type + 's'} available` : `${typeOptions.length} Options`))}
+                                </span>
+                                {(!isFetched || typeOptions.length > 0) && (
+                                  <motion.div
+                                    animate={{ rotate: isActive ? 180 : 0 }}
+                                    className="text-muted-foreground"
+                                  >
+                                    ▼
+                                  </motion.div>
+                                )}
+                              </div>
+                            </button>
                             
-                            const currentActive = activeTabs[pax.id] ?? (pax.transportPreference !== 'any' ? pax.transportPreference : 'flight');
-                            const isActive = currentActive === type && typeOptions.length > 0;
-                            
-                            return (
-                              <div key={type} className={`border-2 border-border rounded-xl overflow-hidden bg-card transition-all ${typeOptions.length === 0 ? 'opacity-60' : ''}`}>
-                                {/* Accordion Header */}
-                                <button
-                                  onClick={() => typeOptions.length > 0 && setActiveTabs({ ...activeTabs, [pax.id]: isActive ? '' : type })}
-                                  disabled={typeOptions.length === 0}
-                                  className={`w-full px-6 py-4 flex items-center justify-between font-bold transition-colors ${
-                                    isActive 
-                                      ? 'bg-primary/10 text-primary' 
-                                      : (typeOptions.length === 0 ? 'bg-muted/30 text-muted-foreground cursor-not-allowed' : 'hover:bg-muted/50 text-foreground')
-                                  }`}
+                            {/* Accordion Content */}
+                            <AnimatePresence initial={false}>
+                              {isActive && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className="overflow-hidden"
                                 >
-                                  <div className="flex items-center gap-3">
-                                    {getTransportIcon(type)}
-                                    <span className="capitalize text-lg">{type === 'bus' ? 'buses' : `${type}s`}</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <span className={`text-sm px-3 py-1 rounded-full border ${typeOptions.length === 0 ? 'bg-muted/50 border-transparent' : 'bg-background border-border'}`}>
-                                      {typeOptions.length === 0 ? `No ${type === 'bus' ? 'buses' : type + 's'} available` : `${typeOptions.length} Options`}
-                                    </span>
-                                    {typeOptions.length > 0 && (
-                                      <motion.div
-                                        animate={{ rotate: isActive ? 180 : 0 }}
-                                        className="text-muted-foreground"
-                                      >
-                                        ▼
-                                      </motion.div>
-                                    )}
-                                  </div>
-                                </button>
-                                
-                                {/* Accordion Content */}
-                                <AnimatePresence initial={false}>
-                                  {isActive && (
-                                    <motion.div
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      transition={{ duration: 0.3 }}
-                                      className="overflow-hidden"
-                                    >
-                                      <div className="p-4 space-y-3 bg-muted/20 border-t-2 border-border">
-                                        {typeOptions.map((opt, idx) => {
+                                  <div className="p-4 space-y-3 bg-muted/20 border-t-2 border-border">
+                                    {isLoading ? (
+                                      <div className="flex items-center justify-center p-8 text-muted-foreground font-medium">
+                                        <Loader2 className="animate-spin mr-3" size={20} /> Searching live {type === 'bus' ? 'buses' : type + 's'}...
+                                      </div>
+                                    ) : (
+                                      typeOptions.map((opt, idx) => {
                                           const isSelected = selectedTransportId === opt.id;
                                           const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
 

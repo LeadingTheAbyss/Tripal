@@ -34,12 +34,12 @@ async def test_import():
         return {"error": str(e), "trace": traceback.format_exc()}
 
 @app.get("/api/transport")
-async def get_transport(source: str, destination: str):
+async def get_transport(source: str, destination: str, mode: str = "all"):
     # Dummy passenger to satisfy backend requirements
     p1 = Passenger(id="1", name="Dummy", age=25, gender="M", pincode="110001", city=source)
     date = datetime.now() + timedelta(days=10)
     
-    options = await rank_transport(source, destination, date, [p1])
+    options = await rank_transport(source, destination, date, [p1], mode=mode)
     
     result = []
     for i, o in enumerate(options):

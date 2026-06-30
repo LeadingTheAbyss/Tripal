@@ -11,7 +11,7 @@ from services.live_flights_api import search_live_flights
 from services.live_trains_api import search_live_trains
 from services.osrm_cab_api import search_live_cabs
 
-async def rank_transport(source: str, dest: str, date: datetime, passengers: List[Passenger]) -> List[TransportOption]:
+async def rank_transport(source: str, dest: str, date: datetime, passengers: List[Passenger], mode: str = "all") -> List[TransportOption]:
     import asyncio
     from services.dgca_pdf_parser import CITY_TO_IATA
     origin_iata = CITY_TO_IATA.get(source.upper())
@@ -24,13 +24,15 @@ async def rank_transport(source: str, dest: str, date: datetime, passengers: Lis
             return await search_live_flights(origin_iata, dest_iata, date.strftime("%Y-%m-%d"))
         return []
 
-    # Fetch all options concurrently natively
-    results = await asyncio.gather(
-        fetch_flights_safely(),
-        search_live_trains(source, dest, date.strftime("%Y-%m-%d")),
-        search_live_cabs(source, dest, date.strftime("%Y-%m-%d")),
-        search_live_buses(source, dest, date.strftime("%Y-%m-%d"))
-    )
+    async def empty_result():
+        return []
+
+    t_flight = fetch_flights_safely() if mode in ["all", "flight"] else empty_result()
+    t_train = search_live_trains(source, dest, date.strftime("%Y-%m-%d")) if mode in ["all", "train"] else empty_result()
+    t_cab = search_live_cabs(source, dest, date.strftime("%Y-%m-%d")) if mode in ["all", "cab"] else empty_result()
+    t_bus = search_live_buses(source, dest, date.strftime("%Y-%m-%d")) if mode in ["all", "bus"] else empty_result()
+
+    results = await asyncio.gather(t_flight, t_train, t_cab, t_bus)
     
     live_flights, live_trains, live_cabs, live_buses = results
     transports = live_flights + live_trains + live_cabs + live_buses
