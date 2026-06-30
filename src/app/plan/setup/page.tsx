@@ -86,7 +86,7 @@ export default function TripSetupPage() {
                 </div>
 
                 <div className="p-8 rounded-2xl bg-card border border-border shadow-sm space-y-8 relative">
-                  <div className="space-y-4 relative z-10 text-white">
+                  <div className="space-y-4 relative z-20 text-white">
                     <label className="text-sm font-medium text-white/60 uppercase tracking-widest">Destination</label>
                     <div className="relative text-black">
                       <CityAutocomplete 

@@ -3,6 +3,7 @@ import httpx
 import asyncio
 import base64
 import re
+from services.unsplash_api import fetch_unsplash_image
 
 try:
     from dotenv import load_dotenv
@@ -17,13 +18,10 @@ WIKI_SEMAPHORE = asyncio.Semaphore(2)
 
 async def fetch_real_image(query: str) -> str:
     """
-    Fetch a real photo of a tourist attraction using a combined strategy.
-    Tries both Unsplash and Wikimedia concurrently, and uses a Vision LLM
-    to determine the best matching image if both are found.
+    Fetch a real photo of a tourist attraction using Wikimedia/Wikipedia.
     """
     import time
     import random
-    from services.unsplash_api import fetch_unsplash_image
 
     if query in IMAGE_CACHE:
         return IMAGE_CACHE[query]
@@ -90,6 +88,7 @@ async def fetch_real_image(query: str) -> str:
     parts = query.split()
     simplified_query = " ".join(parts[:-1]) if len(parts) > 1 else query
     
+
     async def get_unsplash():
         # Try full query first, fallback to simple
         url = await fetch_unsplash_image(query)
@@ -200,5 +199,6 @@ async def evaluate_images_with_vlm(query: str, unsplash_url: str, wiki_url: str)
     else:
         print(f"[ImageService] VLM picked Wiki for '{query}'")
         return wiki_url
+
 
 

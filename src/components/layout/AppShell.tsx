@@ -16,9 +16,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { href: '/plan/setup', label: '1. Trip Setup' },
     { href: '/plan/transport', label: '2. Transport' },
     { href: '/plan/places', label: '3. Places' },
-    { href: '/plan/hotels', label: '4. Hotels' },
-    { href: '/plan/itinerary', label: '5. Itinerary' },
-    { href: '/plan/review', label: '6. Review' },
+    { href: '/plan/food', label: '4. Food' },
+    { href: '/plan/hotels', label: '5. Hotels' },
+    { href: '/plan/itinerary', label: '6. Itinerary' },
+    { href: '/plan/review', label: '7. Review' },
   ];
 
   return (

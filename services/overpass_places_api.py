@@ -113,3 +113,92 @@ def fetch_overpass_places(city_name: str) -> List[Place]:
             f.write(f"Exception: {e}\n")
         print(f"Overpass API Error: {e}")
         return []
+
+def fetch_overpass_food(city_name: str) -> List[Place]:
+    print(f"\n[API Call] Fetching live Food places from Overpass API for {city_name}...")
+    
+    # 1. First geocode the city using Nominatim
+    lat, lon = None, None
+    try:
+        nom_headers = {"User-Agent": "TripEasy/1.0 (TravelApp)"}
+        nom_res = requests.get(f"https://nominatim.openstreetmap.org/search?q={city_name} India&format=json", headers=nom_headers, timeout=10)
+        if nom_res.ok and len(nom_res.json()) > 0:
+            lat = nom_res.json()[0]["lat"]
+            lon = nom_res.json()[0]["lon"]
+    except Exception as e:
+        print(f"Nominatim Error: {e}")
+        
+    endpoint = "https://overpass-api.de/api/interpreter"
+    
+    if lat and lon:
+        query = f"""
+        [out:json][timeout:30];
+        (
+          node["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](around:15000,{lat},{lon});
+          way["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](around:15000,{lat},{lon});
+        );
+        out center;
+        """
+    else:
+        # Fallback to area/node search
+        query = f"""
+        [out:json][timeout:30];
+        area["name"="{city_name}"]->.a;
+        node["name"="{city_name}"]["place"]->.n;
+        (
+          node["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](area.a);
+          way["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](area.a);
+          node["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](around.n:15000);
+          way["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](around.n:15000);
+        );
+        out center;
+        """
+    
+    places = []
+    try:
+        headers = {
+            "User-Agent": "TripEasy/2.0 (contact@tripeasy.app)"
+        }
+        response = requests.post(endpoint, data=query.encode('utf-8'), headers=headers, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        
+        for element in data.get("elements", []):
+            tags = element.get("tags", {})
+            name = tags.get("name:en") or tags.get("name")
+            if not name:
+                continue
+            name = str(name)
+            if len(name) < 4:
+                continue
+                
+            p_lat = element.get("lat") or element.get("center", {}).get("lat")
+            p_lon = element.get("lon") or element.get("center", {}).get("lon")
+            if not p_lat or not p_lon:
+                continue
+                
+            place_type = tags.get("amenity", "restaurant").capitalize()
+            hash_val = int(hashlib.md5(name.encode('utf-8')).hexdigest(), 16)
+            
+            duration = 1.5
+            fee = float(200 + (hash_val % 800)) # Cost for two
+            
+            places.append(Place(
+                id=str(element.get("id", hash_val)),
+                name=name,
+                category=place_type,
+                coordinates=(float(p_lat), float(p_lon)),
+                entry_fee=fee,
+                visit_duration_hours=duration,
+                safe_hours=(8, 23),
+                crowd_estimate=CrowdLevel.HIGH if (hash_val % 3 == 0) else CrowdLevel.MEDIUM,
+                family_friendly=True,
+                safety_score_base=8 + (hash_val % 2),
+                weather_sensitive=False,
+                bad_weather_types=[]
+            ))
+            
+        return places
+    except Exception as e:
+        print(f"Overpass API Error for food: {e}")
+        return []

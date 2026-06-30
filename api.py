@@ -97,11 +97,35 @@ async def get_places(destination: str):
             "id": p.id,
             "name": p.name,
             "category": p.category.lower() if isinstance(p.category, str) else str(p.category),
-            "entryFee": p.entry_fee,
             "visitDurationHours": p.visit_duration_hours,
-            "rating": p.rating if hasattr(p, 'rating') else 4.5,
-            "safetyScore": p.safety_score_base,
-            "weatherScore": 8,
+            "crowdScore": p.crowd_estimate.value,
+            "recommendationScore": 90 - i
+        })
+    return result
+
+from engines.ranking_engine import rank_food
+
+@app.get("/api/food")
+async def get_food(destination: str):
+    trip = TripState(
+        trip_id="T1", mode="direct", passengers=[],
+        source_city="Delhi", destination_city=destination,
+        start_date=datetime.now(), end_date=datetime.now() + timedelta(days=3),
+        total_budget=50000
+    )
+    places = await asyncio.to_thread(rank_food, destination, trip, Weather.SUNNY)
+    
+    from services.image_service import fetch_real_image
+    image_tasks = [fetch_real_image(f"{p.name} {destination} food") for p in places]
+    image_urls = await asyncio.gather(*image_tasks)
+    
+    result = []
+    for i, p in enumerate(places):
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "category": p.category.lower() if isinstance(p.category, str) else str(p.category),
+            "visitDurationHours": p.visit_duration_hours,
             "crowdScore": p.crowd_estimate.value,
             "recommendationScore": 90 - i,
             "imageUrl": image_urls[i]

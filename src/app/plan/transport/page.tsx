@@ -140,6 +140,11 @@ export default function TransportPage() {
   const [loadingMode, setLoadingMode] = useState<Record<string, boolean>>({});
 
   const handleAccordionClick = async (pax: Passenger, type: string) => {
+    if (!pax.city) {
+      alert(`Please go back to Setup and enter a starting city for ${pax.name || 'this passenger'}`);
+      return;
+    }
+    
     const key = `${pax.id}-${type}`;
     const isActive = activeTabs[pax.id] === type;
 

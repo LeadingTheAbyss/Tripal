@@ -18,6 +18,7 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync internal query with external value if it changes
   useEffect(() => {
@@ -34,20 +35,25 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
     onChange(val); // Keep parent state updated
 
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
     if (val.length >= 2) {
       setLoading(true);
-      const apiResults = await api.searchCity(val);
-      setResults(apiResults);
-      setIsOpen(true);
-      setLoading(false);
+      timeoutRef.current = setTimeout(async () => {
+        const apiResults = await api.searchCity(val);
+        setResults(apiResults);
+        setIsOpen(true);
+        setLoading(false);
+      }, 500);
     } else {
       setResults([]);
       setIsOpen(false);
+      setLoading(false);
     }
   };
 
