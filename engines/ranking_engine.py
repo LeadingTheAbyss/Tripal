@@ -1,7 +1,7 @@
 from typing import List
 from datetime import datetime, timedelta
 from models.entities import Passenger, TransportOption, Place, Hotel
-from models.enums import TransportType, Weather
+from models.enums import TransportType, Weather, CrowdLevel
 from models.state import TripState
 from data.mock_db import MOCK_PLACES_DB, MOCK_HOTEL_DB
 from engines.safety_engine import calculate_safety_score
@@ -52,30 +52,51 @@ from services.geoapify_api import search_geoapify_places
 def rank_places(city: str, trip: TripState, weather: Weather) -> List[Place]:
     # 1. Primary: Overpass
     places = fetch_overpass_places(city)
-    
+        
     if not places:
-        # 2. Secondary: OpenTripMap
+        # 3. Tertiary: OpenTripMap
         places = search_opentripmap_places(city)
         
     if not places:
-        # 3. Tertiary: Geoapify
+        # 4. Quaternary: Geoapify
         places = search_geoapify_places(city)
         
     if not places:
-        # 4. Last resort: curated mock DB
+        # 5. Last resort: curated mock DB
         print(f"[Fallback] All APIs returned nothing. Using mock DB for '{city}'.")
         places = MOCK_PLACES_DB.get(city, [])
 
     scored_places = []
     
     for p in places:
-        if p.entry_fee > trip.remaining_budget: continue
         if p.weather_sensitive and weather in p.bad_weather_types: continue
         
-        safety = calculate_safety_score(p, trip.passengers, planned_hour=14)
-        if safety < 4: continue
+        score = (4 - p.crowd_estimate.value)
+        scored_places.append((score, p))
         
-        score = safety * 3 + (4 - p.crowd_estimate.value) * 2
+    scored_places.sort(key=lambda x: x[0], reverse=True)
+    return [p for s, p in scored_places][:40]
+
+from services.overpass_places_api import fetch_overpass_food
+
+def rank_food(city: str, trip: TripState, weather: Weather) -> List[Place]:
+    # 1. Primary: Overpass
+    places = fetch_overpass_food(city)
+        
+    if not places:
+        print(f"[Fallback] All APIs returned nothing for food. Using mock DB for '{city}'.")
+        places = [p for p in MOCK_PLACES_DB.get(city, []) if p.category == "Food"]
+        if not places:
+            # Generate generic fallback food
+            places = [
+                Place(id=f"f1_{city}", name=f"{city} Central Cafe", category="Cafe", coordinates=(0.0,0.0), entry_fee=300, visit_duration_hours=1, safe_hours=(8,22), crowd_estimate=CrowdLevel.MEDIUM, family_friendly=True, safety_score_base=9, weather_sensitive=False, bad_weather_types=[]),
+                Place(id=f"f2_{city}", name=f"The Great {city} Diner", category="Restaurant", coordinates=(0.0,0.0), entry_fee=800, visit_duration_hours=1.5, safe_hours=(11,23), crowd_estimate=CrowdLevel.HIGH, family_friendly=True, safety_score_base=8, weather_sensitive=False, bad_weather_types=[])
+            ]
+
+    scored_places = []
+    
+    for p in places:
+        score = 0
         scored_places.append((score, p))
         
     scored_places.sort(key=lambda x: x[0], reverse=True)
@@ -87,7 +108,7 @@ def rank_hotels(city: str, trip: TripState) -> List[Hotel]:
                               trip.end_date.strftime("%Y-%m-%d"))
     
     if not hotels:
-        # Fallback if Live API fails or is empty
+        # Fallback: Mock DB
         hotels = MOCK_HOTEL_DB.get(city, [])
         if not hotels:
             # Generate generic fallback hotels so the UI doesn't break
