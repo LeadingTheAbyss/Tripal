@@ -368,8 +368,7 @@ export default function TransportPage() {
                                       <div className="flex items-center justify-center p-8 text-muted-foreground font-medium">
                                         <Loader2 className="animate-spin mr-3" size={20} /> Searching live {type === 'bus' ? 'buses' : type + 's'}...
                                       </div>
-                                    ) : (
-                                      typeOptions.map((opt, idx) => {
+                                    ) : typeOptions.map((opt, idx) => {
                                           const isSelected = selectedTransportId === opt.id;
                                           const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
 
@@ -453,8 +452,6 @@ export default function TransportPage() {
                             );
                           })}
                         </div>
-                      </>
-                    )}
                   </motion.section>
                 );
               })}
