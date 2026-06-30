@@ -13,16 +13,20 @@ from services.osrm_cab_api import search_live_cabs
 
 async def rank_transport(source: str, dest: str, date: datetime, passengers: List[Passenger]) -> List[TransportOption]:
     import asyncio
-    # Simple IATA mapping for the simulation
-    iata_map = {"Delhi": "DEL", "Mumbai": "BOM", "Goa": "GOI", "Lucknow": "LKO"}
-    origin_iata = iata_map.get(source, "DEL")
-    dest_iata = iata_map.get(dest, "GOI")
+    from services.dgca_pdf_parser import CITY_TO_IATA
+    origin_iata = CITY_TO_IATA.get(source.upper())
+    dest_iata = CITY_TO_IATA.get(dest.upper())
     
     from services.live_bus_api import search_live_buses
 
+    async def fetch_flights_safely():
+        if origin_iata and dest_iata:
+            return await search_live_flights(origin_iata, dest_iata, date.strftime("%Y-%m-%d"))
+        return []
+
     # Fetch all options concurrently natively
     results = await asyncio.gather(
-        search_live_flights(origin_iata, dest_iata, date.strftime("%Y-%m-%d")),
+        fetch_flights_safely(),
         search_live_trains(source, dest, date.strftime("%Y-%m-%d")),
         search_live_cabs(source, dest, date.strftime("%Y-%m-%d")),
         search_live_buses(source, dest, date.strftime("%Y-%m-%d"))

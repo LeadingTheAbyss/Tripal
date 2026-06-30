@@ -46,6 +46,7 @@ Rules:
 - matchScore is 0-100. Primary preference destinations score 80-100, others score 50-79.
 - isPrimaryMatch is true ONLY for destinations matching "{preference}".
 - Return EXACTLY 6 destinations.
+- DO NOT use any emojis anywhere in the response text, tags, or names.
 """
 
 def call_ollama(prompt: str) -> str:

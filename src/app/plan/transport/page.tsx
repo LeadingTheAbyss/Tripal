@@ -5,10 +5,116 @@ import { useTripStore } from '@/store/tripStore';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TransportOption, Passenger } from '@/types/trip';
 import { api } from '@/lib/api';
-import { Plane, Train, Bus, Car, ArrowRight, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
+import { Train, Plane, MapPin, Building, Bus, Car, Loader2, IndianRupee, Clock, ShieldCheck, Armchair, ChevronDown, ArrowRight, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrainRouteModal, LiveStatusModal, StationBoardModal } from '@/components/ui/TrainModals';
+
+const LoadingScreen = ({ isFinished, onComplete }: { isFinished: boolean, onComplete: () => void }) => {
+  const [progress, setProgress] = useState(0);
+
+  // Asymptotic progress logic
+  useEffect(() => {
+    if (isFinished) {
+      setProgress(100);
+      const t = setTimeout(onComplete, 800);
+      return () => clearTimeout(t);
+    }
+
+    const interval = setInterval(() => {
+      setProgress(p => {
+        const remaining = 99 - p;
+        const jump = Math.max(0.8, remaining * 0.08); 
+        const next = p + jump;
+        return next >= 99 ? 99 : next;
+      });
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [isFinished, onComplete]);
+
+  return (
+    <div className="fixed inset-0 z-[100] w-full h-screen bg-[#1e1424] flex flex-col justify-end items-center pb-16 overflow-hidden select-none">
+      {/* Epic Background Illustration */}
+      <img 
+        src="/images/travel_loading_bg.png" 
+        alt="Epic Journey Horizon" 
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+
+      {/* Title Header (Top Right style alignment) */}
+      <div className="absolute top-12 right-12 text-right z-50">
+        <h1 className="text-4xl md:text-5xl font-black text-white tracking-wider drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] uppercase">
+          Ghumi-Ghumi
+        </h1>
+      </div>
+
+      {/* Gamified UI Loading Container */}
+      <div className="w-full max-w-2xl px-6 z-50 flex flex-col items-center">
+        <span className="text-xl font-black text-amber-400 tracking-widest uppercase mb-2 animate-pulse drop-shadow">
+          Finding Transport Options... {Math.floor(progress)}%
+        </span>
+
+        {/* The Track */}
+        <div className="relative w-full h-6 bg-black/60 rounded-full border border-white/10 backdrop-blur-sm flex items-center p-1">
+          {/* Progress Fill */}
+          <motion.div 
+            className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full"
+            style={{ width: `${progress}%` }}
+            transition={{ ease: "easeInOut" }}
+          />
+          
+          {/* Slider Head (Animated Train) */}
+          <motion.div 
+            className="absolute top-1/2 -translate-y-1/2 -ml-6 flex items-center z-10"
+            style={{ left: `${progress}%` }}
+            transition={{ ease: "easeInOut" }}
+          >
+            {/* Animated Smoke Puffs */}
+            <div className="absolute -left-6 -top-4 flex gap-1 pointer-events-none scale-x-[-1]">
+              <motion.div 
+                animate={{ x: [-2, -15], y: [-5, -15], opacity: [0.8, 0], scale: [0.5, 2] }}
+                transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                className="w-2.5 h-2.5 bg-gray-200/80 rounded-full blur-[1px]"
+              />
+              <motion.div 
+                animate={{ x: [-1, -10], y: [-2, -10], opacity: [0.6, 0], scale: [0.6, 1.5] }}
+                transition={{ repeat: Infinity, duration: 1.2, delay: 0.3 }}
+                className="w-2 h-2 bg-gray-300/60 rounded-full blur-[1px]"
+              />
+              <motion.div 
+                animate={{ x: [0, -8], y: [0, -8], opacity: [0.9, 0], scale: [0.4, 1.8] }}
+                transition={{ repeat: Infinity, duration: 0.8, delay: 0.6 }}
+                className="w-1.5 h-1.5 bg-white/70 rounded-full blur-[0.5px]"
+              />
+            </div>
+            
+            {/* The Train (Flipped horizontally to face right) */}
+            <motion.div 
+              className="text-4xl scale-x-[-1] filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]"
+              animate={{ y: [-1.5, 1.5, -1.5], rotate: [-2, 2, -2] }}
+              transition={{ repeat: Infinity, duration: 0.4, ease: "easeInOut" }}
+            >
+                <Train size={48} className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Waiting Message */}
+        <div className="h-12 mt-4 flex items-center justify-center overflow-hidden">
+          <motion.p 
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+            className="text-xs md:text-sm text-gray-300 text-center max-w-lg font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,1)]"
+          >
+            Searching across multiple sources. This might take a few moments...
+          </motion.p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function TransportPage() {
   const router = useRouter();
@@ -18,6 +124,7 @@ export default function TransportPage() {
   // Local state to store fetched options per passenger
   const [transportMap, setTransportMap] = useState<Record<string, TransportOption[]>>({});
   const [loading, setLoading] = useState(true);
+  const [backendFinished, setBackendFinished] = useState(false);
   const [sortBy, setSortBy] = useState<'recommended' | 'cheapest' | 'fastest' | 'earliest'>('recommended');
 
   const [routeModalOpen, setRouteModalOpen] = useState(false);
@@ -41,13 +148,13 @@ export default function TransportPage() {
       }
       
       setTransportMap(newMap);
-      setLoading(false);
+      setBackendFinished(true);
     };
 
     if (trip.passengers.length > 0 && trip.destination) {
       fetchAllTransport();
     } else {
-      setLoading(false);
+      setBackendFinished(true);
     }
   }, [trip.passengers, trip.destination]);
 
@@ -143,10 +250,9 @@ export default function TransportPage() {
           {loading ? (
             <motion.div 
               key="loading"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="p-12 text-center text-muted-foreground animate-pulse"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.5 } }}
             >
-              Searching routes across multiple APIs...
+              <LoadingScreen isFinished={backendFinished} onComplete={() => setLoading(false)} />
             </motion.div>
           ) : trip.passengers.length === 0 ? (
             <motion.div 
@@ -212,20 +318,20 @@ export default function TransportPage() {
                         <div className="space-y-4">
                           {['flight', 'train', 'bus', 'cab'].map((type) => {
                             const typeOptions = options.filter(o => o.type === type || (type === 'cab' && o.type === 'car'));
-                            if (typeOptions.length === 0) return null;
                             
                             const currentActive = activeTabs[pax.id] ?? (pax.transportPreference !== 'any' ? pax.transportPreference : 'flight');
-                            const isActive = currentActive === type;
+                            const isActive = currentActive === type && typeOptions.length > 0;
                             
                             return (
-                              <div key={type} className="border-2 border-border rounded-xl overflow-hidden bg-card transition-all">
+                              <div key={type} className={`border-2 border-border rounded-xl overflow-hidden bg-card transition-all ${typeOptions.length === 0 ? 'opacity-60' : ''}`}>
                                 {/* Accordion Header */}
                                 <button
-                                  onClick={() => setActiveTabs({ ...activeTabs, [pax.id]: isActive ? '' : type })}
+                                  onClick={() => typeOptions.length > 0 && setActiveTabs({ ...activeTabs, [pax.id]: isActive ? '' : type })}
+                                  disabled={typeOptions.length === 0}
                                   className={`w-full px-6 py-4 flex items-center justify-between font-bold transition-colors ${
                                     isActive 
                                       ? 'bg-primary/10 text-primary' 
-                                      : 'hover:bg-muted/50 text-foreground'
+                                      : (typeOptions.length === 0 ? 'bg-muted/30 text-muted-foreground cursor-not-allowed' : 'hover:bg-muted/50 text-foreground')
                                   }`}
                                 >
                                   <div className="flex items-center gap-3">
@@ -233,15 +339,17 @@ export default function TransportPage() {
                                     <span className="capitalize text-lg">{type === 'bus' ? 'buses' : `${type}s`}</span>
                                   </div>
                                   <div className="flex items-center gap-3">
-                                    <span className="bg-background text-sm px-3 py-1 rounded-full border border-border">
-                                      {typeOptions.length} Options
+                                    <span className={`text-sm px-3 py-1 rounded-full border ${typeOptions.length === 0 ? 'bg-muted/50 border-transparent' : 'bg-background border-border'}`}>
+                                      {typeOptions.length === 0 ? `No ${type === 'bus' ? 'buses' : type + 's'} available` : `${typeOptions.length} Options`}
                                     </span>
-                                    <motion.div
-                                      animate={{ rotate: isActive ? 180 : 0 }}
-                                      className="text-muted-foreground"
-                                    >
-                                      ▼
-                                    </motion.div>
+                                    {typeOptions.length > 0 && (
+                                      <motion.div
+                                        animate={{ rotate: isActive ? 180 : 0 }}
+                                        className="text-muted-foreground"
+                                      >
+                                        ▼
+                                      </motion.div>
+                                    )}
                                   </div>
                                 </button>
                                 

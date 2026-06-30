@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClientOnly } from "@/components/layout/ClientOnly";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const outfit = Outfit({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-outfit",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -23,7 +23,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${outfit.variable} font-sans h-full antialiased`}
+      className={`${inter.variable} font-sans h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

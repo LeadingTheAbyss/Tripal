@@ -119,9 +119,11 @@ export default function ModernDateRangePicker({ label, startDate, endDate, onCha
 
   return (
     <div className="space-y-2 relative" ref={wrapperRef}>
-      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-        <CalendarIcon size={16} className="text-primary" /> {label}
-      </label>
+      {label && (
+        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          {label} <CalendarIcon size={16} className="text-primary" />
+        </label>
+      )}
       
       <div 
         className="w-full p-3 bg-background border border-input rounded-lg flex items-center justify-between cursor-pointer hover:border-primary transition-colors"

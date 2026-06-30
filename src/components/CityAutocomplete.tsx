@@ -86,7 +86,7 @@ export default function CityAutocomplete({ label, placeholder, value, onChange }
             >
               <div className="font-semibold text-foreground flex items-center gap-2">
                 <MapPin size={14} className="text-muted-foreground" />
-                {res.name} <span className="text-muted-foreground text-xs font-normal">({res.state})</span>
+                {i + 1}. {res.name} <span className="text-muted-foreground text-xs font-normal">({res.state})</span>
               </div>
             </div>
           ))}

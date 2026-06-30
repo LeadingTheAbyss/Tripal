@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useBudgetStore } from '@/store/budgetStore';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Plane, Wallet, Landmark, Building, MapPin } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="w-64 border-r border-border bg-card p-6 flex flex-col justify-between shrink-0 overflow-y-auto shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)] z-10">
         <div>
           <Link href="/" className="block cursor-pointer hover:opacity-80 transition-opacity">
-            <h1 className="text-2xl font-black mb-8 tracking-tight text-foreground">Ghumi-<span className="text-primary">Ghumi</span> <span className="text-xl">✈️</span></h1>
+            <h1 className="text-2xl font-black mb-8 tracking-tight text-foreground flex items-center gap-2">Ghumi-<span className="text-primary">Ghumi</span> <Plane className="text-primary" size={24} /></h1>
           </Link>
           <nav className="space-y-1.5">
             {navLinks.map(link => (
@@ -49,33 +49,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Sticky Live Budget Widget */}
         <div className="mt-8 p-5 bg-background rounded-2xl border border-border shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-bold tracking-widest text-muted-foreground uppercase">The Purse</h3>
-            <span className="text-base">💰</span>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase">The Purse</h3>
+            <Wallet size={18} className="text-primary" />
           </div>
           
           <div className="space-y-4">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Total Budget</div>
+              <div className="text-[11px] uppercase text-muted-foreground font-semibold mb-0.5">Total Budget</div>
               <div className="text-2xl font-black tracking-tight text-foreground">₹{budget.totalBudget.toLocaleString()}</div>
             </div>
             
             <div className="space-y-2.5 border-t border-border/60 pt-3">
               <div className="flex justify-between items-center text-xs font-medium">
-                <span className="text-muted-foreground flex items-center gap-1.5">✈️ <span className="mt-0.5">Transport</span></span>
+                <span className="text-muted-foreground flex items-center gap-1.5"><Plane size={14} /> <span className="mt-0.5">Transport</span></span>
                 <span className="text-foreground font-semibold">₹{budget.spentTransport.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center text-xs font-medium">
-                <span className="text-muted-foreground flex items-center gap-1.5">🏛️ <span className="mt-0.5">Places</span></span>
+                <span className="text-muted-foreground flex items-center gap-1.5"><Landmark size={14} /> <span className="mt-0.5">Places</span></span>
                 <span className="text-foreground font-semibold">₹{budget.spentPlaces.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center text-xs font-medium">
-                <span className="text-muted-foreground flex items-center gap-1.5">🏨 <span className="mt-0.5">Hotels</span></span>
+                <span className="text-muted-foreground flex items-center gap-1.5"><Building size={14} /> <span className="mt-0.5">Hotels</span></span>
                 <span className="text-foreground font-semibold">₹{budget.spentHotels.toLocaleString()}</span>
               </div>
             </div>
 
             <div className="border-t border-border/60 pt-3">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Remaining</div>
+              <div className="text-[11px] uppercase text-muted-foreground font-semibold mb-0.5">Remaining</div>
               <div className={`text-xl font-black tracking-tight ${budget.remaining < 0 ? 'text-red-500' : 'text-green-600'}`}>
                 ₹{budget.remaining.toLocaleString()}
               </div>

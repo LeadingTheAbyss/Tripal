@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowRight, Sparkles, Search, Globe, ChevronDown, Train } from 'lucide-react';
+import { ArrowRight, Sparkles, Search, Globe, ChevronDown, Train, Map } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -482,7 +482,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="landing-body" ref={containerRef}>
+    <div className="landing-body bg-[#dfddd5] text-[#151515]" ref={containerRef} style={{ backgroundColor: '#D0CBC7' }}>
       {/* Epic Games Style Navbar */}
       <nav className="absolute top-0 left-0 w-full z-[100] flex items-center justify-between px-4 py-3 bg-[#151515] text-[#E2E2E2] font-sans border-b border-black/50 shadow-md">
         
@@ -552,46 +552,46 @@ export default function LandingPage() {
       <div className="content">
         <div className="loading">Loading Engine...</div>
         <div className="trigger"></div>
-        <div className="section">
-          <h1>Ghumi-Ghumi.</h1>
-          <h3>The beginner's guide to planning.</h3>
-          <p>You've probably forgotten how easy it can be.</p>
-          <div className="scroll-cta">Scroll down</div>
-        </div>
-        
-        <div className="section right">
-          <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
-            <h2>It starts with a destination...</h2>
-          </div>
-        </div>
-        
         <div className="ground-container">
-          <div className="parallax ground"></div>
+          <div className="parallax ground" style={{ backgroundImage: 'url("https://assets.codepen.io/557388/background-reduced.jpg"), linear-gradient(to bottom, #b4afaa, #D0CBC7)', zIndex: 0 }}></div>
+          
+          <div className="section relative z-50">
+            <h1 className="!text-black" style={{ color: '#000000' }}>Ghumi-Ghumi.</h1>
+            <h3 className="!text-black" style={{ color: '#000000' }}>The beginner's guide to planning.</h3>
+            <p className="!text-black" style={{ color: '#000000' }}>You've probably forgotten how easy it can be.</p>
+            <div className="scroll-cta !text-black" style={{ color: '#000000' }}>Scroll down</div>
+          </div>
+          
+          <div className="section right relative z-50">
+            <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
+              <h2 className="!text-black" style={{ color: '#000000' }}>It starts with a destination...</h2>
+            </div>
+          </div>
 
-          <div className="section">
+          <div className="section relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl text-left">
-              <h2>..but quickly becomes complex.</h2>
+              <h2 className="!text-black" style={{ color: '#000000' }}>..but quickly becomes complex.</h2>
               <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Hotels, budgets, schedules!?</p>
             </div>
           </div>
 
-          <div className="section right">
+          <div className="section right relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
-              <h2>And a million open tabs.</h2>
+              <h2 className="!text-black" style={{ color: '#000000' }}>And a million open tabs.</h2>
               <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Flights, trains, hotels everywhere.</p>
             </div>
           </div>
 
-          <div className="section">
+          <div className="section relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl text-left">
-              <h2>We handle the logistics.</h2>
+              <h2 className="!text-black" style={{ color: '#000000' }}>We handle the logistics.</h2>
               <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">For realsies!</p>
             </div>
           </div>
           
-          <div className="section right">
+          <div className="section right relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
-              <h2>Defying all known planning stress.</h2>
+              <h2 className="!text-black" style={{ color: '#000000' }}>Defying all known planning stress.</h2>
               <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">It's actual magic!</p>
             </div>
           </div>
@@ -610,57 +610,42 @@ export default function LandingPage() {
           <div className="section end flex flex-col items-center justify-center pt-32 text-white">
             <h2 className="mb-12">Let's go.</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl mx-auto px-8 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto px-6 relative z-10">
               {/* Card 1: Recommend Mode */}
               <div 
                 onClick={() => router.push('/recommend')}
-                className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl cursor-pointer hover:bg-white/20 transition-all hover:scale-105 group"
+                className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl cursor-pointer hover:bg-white/20 transition-all hover:scale-105 group flex flex-col justify-between"
               >
-                <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                  <Sparkles className="text-white" size={32} />
+                <div>
+                  <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center mb-5">
+                    <Sparkles className="text-white" size={24} />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Recommend a Trip</h3>
+                  <p className="text-zinc-300 text-base mb-6 leading-relaxed">
+                    "We are 4 friends with ₹25k each. Recommend places for us."
+                  </p>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Recommend a Trip</h3>
-                <p className="text-zinc-300 text-lg mb-8 leading-relaxed">
-                  "We are 4 friends with ₹25k each. Recommend places for us."
-                </p>
                 <div className="flex items-center text-white font-bold group-hover:translate-x-2 transition-transform">
-                  Discovery Engine <ArrowRight className="ml-2" />
+                  Discovery Engine <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </div>
 
               {/* Card 2: Direct Planning Mode */}
               <div 
                 onClick={() => router.push('/plan/setup')}
-                className="bg-blue-600 border border-blue-500 p-8 rounded-3xl cursor-pointer hover:bg-blue-500 transition-all duration-300 hover:scale-105 group shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_60px_-15px_rgba(37,99,235,0.7)]"
+                className="bg-blue-600 border border-blue-500 p-6 rounded-3xl cursor-pointer hover:bg-blue-500 transition-all duration-300 hover:scale-105 group shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_60px_-15px_rgba(37,99,235,0.7)] flex flex-col justify-between"
               >
-                <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                  <span className="text-3xl">🗺️</span>
+                <div>
+                  <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center mb-5">
+                    <Map className="text-primary w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Plan My Trip</h3>
+                  <p className="text-blue-100 text-base mb-6 leading-relaxed">
+                    "I already know I'm going to Manali. Plan the logistics for me."
+                  </p>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Plan My Trip</h3>
-                <p className="text-blue-100 text-lg mb-8 leading-relaxed">
-                  "I already know I'm going to Manali. Plan the logistics for me."
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <button 
-                    onClick={() => router.push('/plan')}
-                    className="group relative px-8 py-4 bg-white text-slate-900 rounded-full font-bold text-lg overflow-hidden transition-transform hover:scale-105"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-indigo-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <span className="relative flex items-center gap-2">
-                      Start Planning Now
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => router.push('/pnr')}
-                    className="group relative px-8 py-4 bg-blue-900/40 border border-blue-400/30 text-white rounded-full font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:bg-blue-800/50 backdrop-blur-md"
-                  >
-                    <span className="relative flex items-center gap-2">
-                      Check PNR Status
-                      <Train className="w-5 h-5 opacity-80 group-hover:scale-110 transition-transform" />
-                    </span>
-                  </button>
+                <div className="flex items-center text-white font-bold group-hover:translate-x-2 transition-transform">
+                  Start Planning Now <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </div>
             </div>
