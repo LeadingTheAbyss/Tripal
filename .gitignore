@@ -117,3 +117,16 @@ overpass_debug.log
 out.json
 scratch/
 test_*.py
+
+# API Keys and Secrets
+*.key
+*.pem
+*.keystore
+*secret*
+*credentials*
+keys.json
+credentials.json
+service-account.json
+firebase-adminsdk.json
+google-credentials.json
+aws-credentials.json
