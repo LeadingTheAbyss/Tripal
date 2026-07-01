@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { redis } from '@/lib/redis';
+import { cookies } from 'next/headers';
+
+async function getUserId() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('planbro_session')?.value;
+    if (!token) return null;
+    const session = await prisma.session.findUnique({ where: { token } });
+    if (!session || session.expiresAt < new Date()) return null;
+    return session.userId;
+  } catch (e) {
+    return null;
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,21 +25,24 @@ export async function GET(request: Request) {
   }
 
   try {
-    const cacheKey = `appState:${name}`;
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ value: null });
+
+    const scopedName = `${userId}:${name}`;
+    const cacheKey = `appState:${scopedName}`;
     
     // 1. Try fetching from Redis Cache first
     const cachedState = await redis.get(cacheKey);
     if (cachedState) {
-      console.log(`[Cache Hit] Serving appState for ${name} from Upstash Redis`);
-      // Upstash parses JSON automatically if it was stored as JSON, but we'll return it as is if it's already an object, or parse if string.
+      console.log(`[Cache Hit] Serving appState for ${scopedName} from Upstash Redis`);
       const parsedValue = typeof cachedState === 'string' ? JSON.parse(cachedState) : cachedState;
       return NextResponse.json({ value: parsedValue });
     }
 
-    console.log(`[Cache Miss] Fetching appState for ${name} from PostgreSQL`);
+    console.log(`[Cache Miss] Fetching appState for ${scopedName} from PostgreSQL`);
     // 2. Fetch from Database if not in cache
     const appState = await prisma.appState.findUnique({
-      where: { storeName: name },
+      where: { storeName: scopedName },
     });
 
     if (!appState) {
@@ -50,19 +67,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Store name and value are required' }, { status: 400 });
     }
 
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const scopedName = `${userId}:${name}`;
+
     const appState = await prisma.appState.upsert({
-      where: { storeName: name },
+      where: { storeName: scopedName },
       update: { stateJson: value },
       create: {
-        storeName: name,
+        storeName: scopedName,
         stateJson: value,
       },
     });
 
-    // Invalidate Redis Cache to prevent stale data!
-    const cacheKey = `appState:${name}`;
+    // Invalidate Redis Cache
+    const cacheKey = `appState:${scopedName}`;
     await redis.del(cacheKey);
-    console.log(`[Cache Invalidated] Deleted ${cacheKey} after POST update`);
 
     return NextResponse.json({ success: true, id: appState.id });
   } catch (error) {
@@ -80,14 +101,18 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const scopedName = `${userId}:${name}`;
+
     await prisma.appState.delete({
-      where: { storeName: name },
+      where: { storeName: scopedName },
     });
 
-    // Invalidate Redis Cache to prevent serving a deleted state
-    const cacheKey = `appState:${name}`;
+    // Invalidate Redis Cache
+    const cacheKey = `appState:${scopedName}`;
     await redis.del(cacheKey);
-    console.log(`[Cache Invalidated] Deleted ${cacheKey} after DELETE`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

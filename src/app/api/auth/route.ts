@@ -54,6 +54,25 @@ export async function POST(req: Request) {
       }
     });
 
+    // Track daily login
+    const today = new Date().toISOString().split('T')[0];
+    await prisma.dailyUserStat.upsert({
+      where: {
+        userId_date: {
+          userId: user.id,
+          date: today,
+        }
+      },
+      update: {
+        loginCount: { increment: 1 }
+      },
+      create: {
+        userId: user.id,
+        date: today,
+        loginCount: 1,
+      }
+    });
+
     // Set cookie
     const response = NextResponse.json({ user });
     response.cookies.set('planbro_session', sessionToken, {

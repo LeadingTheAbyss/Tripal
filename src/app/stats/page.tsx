@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { Users, Compass, Activity, ArrowLeft, RefreshCw, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { UserTelemetryModal } from './UserTelemetryModal';
 
 const ADMIN_EMAILS = [
   'kartikeykumarsingh27jun2006@gmail.com',
@@ -130,6 +131,7 @@ export default function AdminStatsPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<{ id: string, name: string } | null>(null);
 
   useEffect(() => {
     fetchUser();
@@ -383,6 +385,17 @@ export default function AdminStatsPage() {
                                     <div className="flex justify-between items-center text-xs"><span className="text-white/60">Hotels</span> <span className="font-mono text-white/90">{u.apiCallsHotels || 0}</span></div>
                                     <div className="flex justify-between items-center text-xs"><span className="text-white/60">Places</span> <span className="font-mono text-white/90">{u.apiCallsPlaces || 0}</span></div>
                                   </div>
+                                  <div className="w-full max-w-sm ml-auto mt-4 pt-4 border-t border-white/5 flex justify-end">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedUserForModal({ id: u.id, name: u.name });
+                                      }}
+                                      className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded transition-colors"
+                                    >
+                                      View History & Graphs
+                                    </button>
+                                  </div>
                                 </td>
                               </motion.tr>
                             )}
@@ -404,6 +417,14 @@ export default function AdminStatsPage() {
 
           </div>
         </motion.div>
+
+        {selectedUserForModal && (
+          <UserTelemetryModal
+            userId={selectedUserForModal.id}
+            userName={selectedUserForModal.name}
+            onClose={() => setSelectedUserForModal(null)}
+          />
+        )}
       </div>
     </AppShell>
   );
