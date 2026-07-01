@@ -377,7 +377,7 @@ export default function TransportPage() {
                                               initial={{ opacity: 0, x: -10 }}
                                               animate={{ opacity: 1, x: 0 }}
                                               transition={{ delay: idx * 0.05 }}
-                                              key={opt.id}
+                                              key={`${opt.id}-${idx}`}
                                               onClick={() => handleSelectTransport(pax.id, opt)}
                                               whileHover={{ scale: 1.01 }}
                                               whileTap={{ scale: 0.99 }}

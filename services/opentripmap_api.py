@@ -32,7 +32,7 @@ def _geocode_city(city_name: str) -> Optional[tuple]:
     try:
         url = "https://photon.komoot.io/api/"
         params = {
-            "q": f"{city_name} India",
+            "q": city_name,
             "limit": 1,
             "osm_tag": ["place:city", "place:town"]
         }
@@ -98,7 +98,7 @@ def search_opentripmap_places(city_name: str) -> List[Place]:
             res.raise_for_status()
             raw_places = res.json()
             
-            if len(raw_places) >= 5:
+            if len(raw_places) >= 30:
                 break
             print(f"[OpenTripMap] Only {len(raw_places)} places found with rate={rate_filter!r}, trying next tier...")
 

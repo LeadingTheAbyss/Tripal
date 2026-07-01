@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { trackApiCall } from '@/lib/metrics';
 
-const PYTHON_API_URL = 'http://127.0.0.1:8001/api';
+const PYTHON_API_URL = 'http://127.0.0.1:8000/api';
 
 const ADMIN_EMAILS = [
   'kartikeykumarsingh27jun2006@gmail.com',

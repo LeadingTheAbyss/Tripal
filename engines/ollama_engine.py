@@ -67,6 +67,47 @@ def call_ollama(prompt: str) -> str:
         print(f"[Error] Ollama call failed: {e}")
         return f"EXCEPTION: {str(e)}"
 
+def pick_best_image_filename(place_name: str, filenames: list) -> int:
+    if not filenames:
+        return 0
+    if len(filenames) == 1:
+        return 0
+        
+    options_str = "\n".join([f"{i}: {name}" for i, name in enumerate(filenames)])
+    
+    prompt = f"""
+I am looking for a real photograph of the tourist attraction: '{place_name}'
+
+Here are the filenames of some image candidates:
+{options_str}
+
+Which filename sounds like the most relevant and highest quality photograph of this place? 
+Respond ONLY with the single integer index (0, 1, 2, etc.) of your choice. Do not write any other text, just the number.
+"""
+    
+    try:
+        res = requests.post("http://localhost:11434/api/generate", json={
+            "model": "gemma2:2b",
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.1
+            }
+        }, timeout=15)
+        res.raise_for_status()
+        text_resp = res.json().get("response", "").strip()
+        
+        match = re.search(r'\d+', text_resp)
+        if match:
+            idx = int(match.group(0))
+            if 0 <= idx < len(filenames):
+                print(f"[OllamaImagePicker] '{place_name}' -> Selected index {idx}: {filenames[idx]}")
+                return idx
+    except Exception as e:
+        print(f"[OllamaImagePicker] Failed or timed out for '{place_name}': {e}")
+        
+    return 0
+
 def parse_response(raw: str) -> list:
     if not raw:
         return []

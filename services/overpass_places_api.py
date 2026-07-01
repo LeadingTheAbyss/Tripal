@@ -11,7 +11,7 @@ def fetch_overpass_places(city_name: str) -> List[Place]:
     lat, lon = None, None
     try:
         nom_headers = {"User-Agent": "TripEasy/1.0 (TravelApp)"}
-        nom_res = requests.get(f"https://nominatim.openstreetmap.org/search?q={city_name} India&format=json", headers=nom_headers, timeout=10)
+        nom_res = requests.get(f"https://nominatim.openstreetmap.org/search?q={city_name}&format=json", headers=nom_headers, timeout=10)
         if nom_res.ok and len(nom_res.json()) > 0:
             lat = nom_res.json()[0]["lat"]
             lon = nom_res.json()[0]["lon"]
@@ -121,7 +121,7 @@ def fetch_overpass_food(city_name: str) -> List[Place]:
     lat, lon = None, None
     try:
         nom_headers = {"User-Agent": "TripEasy/1.0 (TravelApp)"}
-        nom_res = requests.get(f"https://nominatim.openstreetmap.org/search?q={city_name} India&format=json", headers=nom_headers, timeout=10)
+        nom_res = requests.get(f"https://nominatim.openstreetmap.org/search?q={city_name}&format=json", headers=nom_headers, timeout=10)
         if nom_res.ok and len(nom_res.json()) > 0:
             lat = nom_res.json()[0]["lat"]
             lon = nom_res.json()[0]["lon"]

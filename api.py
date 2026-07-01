@@ -97,6 +97,7 @@ async def get_places(destination: str):
             "id": p.id,
             "name": p.name,
             "category": p.category.lower() if isinstance(p.category, str) else str(p.category),
+            "entryFee": p.entry_fee,
             "visitDurationHours": p.visit_duration_hours,
             "crowdScore": p.crowd_estimate.value,
             "recommendationScore": 90 - i,
@@ -126,6 +127,7 @@ async def get_food(destination: str):
             "id": p.id,
             "name": p.name,
             "category": p.category.lower() if isinstance(p.category, str) else str(p.category),
+            "entryFee": p.entry_fee,
             "visitDurationHours": p.visit_duration_hours,
             "crowdScore": p.crowd_estimate.value,
             "recommendationScore": 90 - i,
@@ -191,7 +193,7 @@ def _fetch_photon_cities(q: str) -> List[Dict[str, Any]]:
 
     url = "https://photon.komoot.io/api/?osm_tag=place:city&osm_tag=place:town"
     params = {
-        "q": f"{q} India",
+        "q": q,
         "limit": 5
     }
     headers = {

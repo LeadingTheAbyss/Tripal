@@ -47,19 +47,19 @@ export default function WikiImage({
     };
   }, [placeName, destination]);
 
-  if (!imageUrl) {
-    return (
-      <div className={`bg-zinc-800 animate-pulse flex items-center justify-center ${className}`}>
-        <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-blue-500 animate-spin" />
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className={`bg-zinc-800 flex flex-col items-center justify-center gap-2 text-zinc-600 ${className}`}>
         <ImageOff size={28} />
         <span className="text-xs">No photo</span>
+      </div>
+    );
+  }
+
+  if (!imageUrl) {
+    return (
+      <div className={`bg-zinc-800 animate-pulse flex items-center justify-center ${className}`}>
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-blue-500 animate-spin" />
       </div>
     );
   }

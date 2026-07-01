@@ -33,7 +33,7 @@ def _geocode_city_geoapify(city_name: str, api_key: str) -> Optional[tuple]:
     try:
         url = "https://api.geoapify.com/v1/geocode/search"
         params = {
-            "text": f"{city_name} India",
+            "text": city_name,
             "format": "json",
             "apiKey": api_key,
             "limit": 1
