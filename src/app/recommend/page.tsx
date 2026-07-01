@@ -161,13 +161,38 @@ export default function RecommendPage() {
           
           <div className="flex-[2] flex flex-wrap gap-10 items-end justify-end">
             <div className="flex flex-col gap-4">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Current City</label>
-              <div className="w-64 text-black">
-                <CityAutocomplete 
-                  label="" placeholder="Starting from..." 
-                  value={form.passengers[0].city}
-                  onChange={(val) => handleCityChange(0, val)}
-                />
+              <div className="flex justify-between items-center w-64">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Current Cities</label>
+                {form.passengers.length < 10 && (
+                  <button onClick={handleAddPassenger} className="text-[10px] font-bold text-blue-500 hover:text-blue-600 uppercase tracking-widest flex items-center gap-1">
+                    <Plus size={12}/> Add
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-3 w-64 text-black">
+                {form.passengers.map((pax, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <CityAutocomplete 
+                        label="" placeholder={`Person ${idx + 1} city...`} 
+                        value={pax.city}
+                        onChange={(val) => handleCityChange(idx, val)}
+                      />
+                    </div>
+                    {form.passengers.length > 1 && (
+                      <button 
+                        onClick={() => {
+                          const newPax = [...form.passengers];
+                          newPax.splice(idx, 1);
+                          setForm({ ...form, passengers: newPax });
+                        }} 
+                        className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
             
@@ -176,8 +201,11 @@ export default function RecommendPage() {
               <div className="flex items-center gap-3 border-b border-neutral-300 dark:border-neutral-800 pb-3 transition-colors">
                 <span className="text-neutral-400 dark:text-neutral-600 font-light text-xl">₹</span>
                 <input 
-                  type="number" className="w-32 bg-transparent border-none focus:outline-none text-2xl text-neutral-900 dark:text-white font-light"
-                  value={form.budget} onChange={e => setForm({...form, budget: parseInt(e.target.value) || 0})}
+                  type="number" min="1" className="w-32 bg-transparent border-none focus:outline-none text-2xl text-neutral-900 dark:text-white font-light"
+                  value={form.budget || ''} onChange={e => {
+                    const val = parseInt(e.target.value);
+                    setForm({...form, budget: isNaN(val) ? '' as any : Math.max(1, val)});
+                  }}
                 />
               </div>
             </div>
@@ -186,8 +214,11 @@ export default function RecommendPage() {
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Duration</label>
               <div className="flex items-center gap-3 border-b border-neutral-300 dark:border-neutral-800 pb-3 transition-colors">
                 <input 
-                  type="number" className="w-16 bg-transparent border-none focus:outline-none text-2xl text-neutral-900 dark:text-white font-light text-center"
-                  value={form.days} onChange={e => setForm({...form, days: parseInt(e.target.value) || 0})}
+                  type="number" min="1" className="w-16 bg-transparent border-none focus:outline-none text-2xl text-neutral-900 dark:text-white font-light text-center"
+                  value={form.days || ''} onChange={e => {
+                    const val = parseInt(e.target.value);
+                    setForm({...form, days: isNaN(val) ? '' as any : Math.max(1, val)});
+                  }}
                 />
                 <span className="text-neutral-600 text-sm font-light uppercase tracking-widest">Days</span>
               </div>

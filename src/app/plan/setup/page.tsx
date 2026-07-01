@@ -201,7 +201,10 @@ export default function TripSetupPage() {
                             type="number" placeholder="Years" min="1" max="120"
                             className="w-full h-11 bg-neutral-50 dark:bg-[#1A1A1A] border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 text-sm text-black dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                             value={pax.age || ''} 
-                            onChange={(e) => trip.updatePassenger(pax.id, { age: parseInt(e.target.value) || 0 })}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              trip.updatePassenger(pax.id, { age: isNaN(val) ? '' as any : Math.max(1, val) });
+                            }}
                           />
                         </div>
 
@@ -267,9 +270,12 @@ export default function TripSetupPage() {
                 <div className="flex items-center gap-3 border-b border-neutral-300 dark:border-neutral-800 pb-3 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors">
                   <span className="text-xl font-medium text-neutral-500">₹</span>
                   <input 
-                    type="number" min="0" placeholder="100000"
+                    type="number" min="1" placeholder="100000"
                     value={budget.totalBudget || ''}
-                    onChange={(e) => budget.setTotalBudget(Math.max(0, Number(e.target.value) || 0))}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      budget.setTotalBudget(isNaN(val) ? 0 : Math.max(1, val));
+                    }}
                     className="w-full bg-transparent border-none focus:outline-none text-3xl font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-700"
                   />
                 </div>
