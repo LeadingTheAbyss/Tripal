@@ -1,9 +1,10 @@
 import os
 import httpx
 import asyncio
-import base64
 import re
-from services.unsplash_api import fetch_unsplash_image
+import json
+from typing import Optional
+from models.image import PlaceImage
 
 try:
     from dotenv import load_dotenv
@@ -11,194 +12,197 @@ try:
 except ImportError:
     pass
 
-IMAGE_CACHE = {}
+# We will use Upstash REST API for caching
+UPSTASH_URL = os.getenv("UPSTASH_REDIS_REST_URL")
+UPSTASH_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
 
-# Allow max 2 simultaneous Wikipedia requests to prevent rate limiting (429 Too Many Requests)
-WIKI_SEMAPHORE = asyncio.Semaphore(2)
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
-async def fetch_real_image(query: str) -> str:
-    """
-    Fetch a real photo of a tourist attraction using Wikimedia/Wikipedia.
-    """
-    import time
-    import random
+OPENVERSE_SEMAPHORE = asyncio.Semaphore(5)
+WIKI_SEMAPHORE = asyncio.Semaphore(5)
+PEXELS_SEMAPHORE = asyncio.Semaphore(5)
 
-    if query in IMAGE_CACHE:
-        return IMAGE_CACHE[query]
+async def _cache_get(key: str) -> Optional[str]:
+    if not UPSTASH_URL or not UPSTASH_TOKEN:
+        return None
+    try:
+        headers = {"Authorization": f"Bearer {UPSTASH_TOKEN}"}
+        async with httpx.AsyncClient() as client:
+            res = await client.get(f"{UPSTASH_URL}/get/imgcache:{key}", headers=headers, timeout=5.0)
+            if res.status_code == 200:
+                data = res.json()
+                return data.get("result")
+    except Exception as e:
+        print(f"[Cache Error] get: {e}")
+    return None
 
-    headers = {"User-Agent": "TripEasy/1.0 (https://github.com/LeadingTheAbyss/Tripal; admin@tripeasy.com)"}
+async def _cache_set(key: str, value: str, ttl_seconds: int = 86400):
+    if not UPSTASH_URL or not UPSTASH_TOKEN:
+        return
+    try:
+        # Upstash REST API for SET requires POST or putting value in URL. 
+        # Better to use POST with body for large JSONs, but Upstash GET/POST semantics for SET are:
+        # POST /set/{key}  with body as value
+        headers = {"Authorization": f"Bearer {UPSTASH_TOKEN}"}
+        async with httpx.AsyncClient() as client:
+            await client.post(f"{UPSTASH_URL}/pipeline", headers=headers, json=[
+                ["SET", f"imgcache:{key}", value, "EX", ttl_seconds]
+            ], timeout=5.0)
+    except Exception as e:
+        print(f"[Cache Error] set: {e}")
 
-    # Helper function to make rate-limited Wikipedia/Wikimedia requests
-    async def _wiki_get(url, params):
-        async with WIKI_SEMAPHORE:
+async def search_openverse(query: str) -> Optional[PlaceImage]:
+    # Try openverse first
+    async with OPENVERSE_SEMAPHORE:
+        try:
             async with httpx.AsyncClient() as client:
-                for attempt in range(3):
-                    res = await client.get(url, params=params, headers=headers, timeout=5.0)
-                    if res.status_code == 429:
-                        await asyncio.sleep(random.uniform(0.5, 1.5) * (2 ** attempt))
-                        continue
-                    res.raise_for_status()
-                    return res.json()
-        return {}
-
-    async def _try_wikipedia_pageimages(q: str):
-        params = {
-            "action": "query", "prop": "pageimages", "generator": "search",
-            "gsrsearch": q, "format": "json", "pithumbsize": 800, "gsrlimit": 1
-        }
-        try:
-            data = await _wiki_get("https://en.wikipedia.org/w/api.php", params)
-            pages = data.get("query", {}).get("pages", {})
-            if pages:
-                page = list(pages.values())[0]
-                if "thumbnail" in page:
-                    return page["thumbnail"]["source"]
-        except Exception as e:
-            print(f"[ImageService] Wikipedia Strategy failed for '{q}': {e}")
-        return None
-
-    async def _try_commons_search(q: str):
-        params = {
-            "action": "query", "list": "search", "srsearch": q,
-            "srnamespace": 6, "srlimit": 5, "format": "json"
-        }
-        try:
-            data = await _wiki_get("https://commons.wikimedia.org/w/api.php", params)
-            hits = data.get("query", {}).get("search", [])
-            
-            exclusions = ["map", "logo", "flag", "portrait", "graph", "chart", "diagram"]
-            
-            for h in hits:
-                title = h.get("title", "")
-                title_lower = title.lower()
-                if title_lower.endswith(('.jpg', '.jpeg', '.png')) and not any(excl in title_lower for excl in exclusions):
-                    info_params = {
-                        "action": "query", "titles": title,
-                        "prop": "imageinfo", "iiprop": "url", "format": "json"
-                    }
-                    info_data = await _wiki_get("https://commons.wikimedia.org/w/api.php", info_params)
-                    for p in info_data.get("query", {}).get("pages", {}).values():
-                        if "imageinfo" in p:
-                            return p["imageinfo"][0].get("url")
-        except Exception as e:
-            print(f"[ImageService] Commons Strategy failed for '{q}': {e}")
-        return None
-
-    # Simplify query: Remove the last word (usually the city name added by the frontend)
-    parts = query.split()
-    simplified_query = " ".join(parts[:-1]) if len(parts) > 1 else query
-    
-
-    async def get_unsplash():
-        # Try full query first, fallback to simple
-        url = await fetch_unsplash_image(query)
-        if not url:
-            url = await fetch_unsplash_image(simplified_query)
-        return url
-        
-    async def get_wiki():
-        # 4-Strategy Pipeline for Wiki
-        strategies = [
-            (query, _try_commons_search),
-            (simplified_query, _try_commons_search),
-            (query, _try_wikipedia_pageimages),
-            (simplified_query, _try_wikipedia_pageimages)
-        ]
-        for q, strategy in strategies:
-            url = await strategy(q)
-            if url:
-                return url
-        return None
-
-    # Fetch concurrently
-    unsplash_url, wiki_url = await asyncio.gather(
-        get_unsplash(),
-        get_wiki()
-    )
-
-    if not unsplash_url and not wiki_url:
-        return None
-
-    if unsplash_url and not wiki_url:
-        IMAGE_CACHE[query] = unsplash_url
-        return unsplash_url
-
-    if wiki_url and not unsplash_url:
-        IMAGE_CACHE[query] = wiki_url
-        return wiki_url
-
-    # Both found: Use VLM to evaluate the best one
-    best_url = await evaluate_images_with_vlm(query, unsplash_url, wiki_url)
-    IMAGE_CACHE[query] = best_url
-    return best_url
-
-async def evaluate_images_with_vlm(query: str, unsplash_url: str, wiki_url: str) -> str:
-    """
-    Downloads both images and uses a Vision LLM to rate their relevance to the query.
-    Returns the URL of the highest rated image.
-    """
-    async def _get_vlm_score(url, source_name):
-        import tempfile
-        try:
-            # Download image to a temporary file on disk
-            async with httpx.AsyncClient() as client:
-                async with client.stream("GET", url, timeout=5.0) as res:
-                    res.raise_for_status()
-                    
-                    b64_img = ""
-                    # NamedTemporaryFile automatically deletes the file from disk when closed
-                    with tempfile.NamedTemporaryFile(delete=True) as temp_img:
-                        # Stream the download to disk in chunks to save RAM
-                        async for chunk in res.aiter_bytes(chunk_size=8192):
-                            temp_img.write(chunk)
-                        
-                        # Seek to the beginning of the file so we can read it
-                        temp_img.seek(0)
-                        # Read from disk and encode to base64
-                        b64_img = base64.b64encode(temp_img.read()).decode('utf-8')
-                
-                # Use gemma4:12b for vision, with OpenAI format
-                payload = {
-                    "model": "gemma4:12b",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": f"Rate how well this image represents the tourist attraction '{query}'. Is it a good photo? Provide ONLY a single integer score from 1 to 10."},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}
-                            ]
-                        }
-                    ]
+                headers = {"User-Agent": "TripEasy/1.0"}
+                params = {
+                    "q": query,
+                    "format": "json"
                 }
-                
-                api_res = await client.post("http://localhost:11434/v1/chat/completions", json=payload, timeout=15.0)
-                api_res.raise_for_status()
-                
-                text = api_res.json()["choices"][0]["message"]["content"].strip()
-                
-                # Extract number
-                match = re.search(r'\d+', text)
-                if match:
-                    score = int(match.group(0))
-                    print(f"[ImageService] {source_name} VLM Score for '{query}': {score}")
-                    return score
-                return 0
+                res = await client.get("https://api.openverse.org/v1/images/", params=params, headers=headers, timeout=8.0)
+                if res.status_code == 200:
+                    data = res.json()
+                    results = data.get("results", [])
+                    
+                    best_img = None
+                    best_score = -1
+                    
+                    for img in results:
+                        score = 0
+                        
+                        title = img.get("title", "").lower()
+                        # Penalize maps, logos, vectors
+                        if any(x in title for x in ["map", "logo", "flag", "icon", "vector", "illustration"]):
+                            continue
+                            
+                        # Reward landscape
+                        w = img.get("width") or 0
+                        h = img.get("height") or 0
+                        if w > h:
+                            score += 5
+                            if w >= 1200:
+                                score += 3
+                        elif w > 0:
+                            score += 1
+                        
+                        # Exact name match
+                        q_words = query.lower().split()
+                        if any(w in title for w in q_words if len(w) > 3):
+                            score += 5
+                            
+                        if score > best_score:
+                            best_score = score
+                            best_img = img
+                            
+                    if best_img:
+                        return PlaceImage(
+                            image_url=best_img.get("url"),
+                            source="Openverse",
+                            photographer=best_img.get("creator"),
+                            attribution=best_img.get("attribution")
+                        )
         except Exception as e:
-            print(f"[ImageService] VLM evaluation failed for {source_name}: {e}")
-            # Fallback scores if VLM fails (Wikimedia is usually more accurate for specific queries)
-            return 8 if source_name == 'Wiki' else 7
+            print(f"[Openverse API Error]: {e}")
+    return None
 
-    score_unsplash, score_wiki = await asyncio.gather(
-        _get_vlm_score(unsplash_url, 'Unsplash'),
-        _get_vlm_score(wiki_url, 'Wiki')
-    )
+async def search_wikimedia(query: str) -> Optional[PlaceImage]:
+    async with WIKI_SEMAPHORE:
+        try:
+            async with httpx.AsyncClient() as client:
+                headers = {"User-Agent": "TripEasy/1.0 (https://github.com/LeadingTheAbyss/Tripal)"}
+                params = {
+                    "action": "query", "prop": "pageimages", "generator": "search",
+                    "gsrsearch": query, "format": "json", "pithumbsize": 1000, "gsrlimit": 3
+                }
+                res = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers=headers, timeout=8.0)
+                if res.status_code == 200:
+                    data = res.json()
+                    pages = data.get("query", {}).get("pages", {})
+                    for page in pages.values():
+                        if "thumbnail" in page:
+                            url = page["thumbnail"]["source"]
+                            return PlaceImage(
+                                image_url=url,
+                                source="Wikimedia Commons",
+                                photographer="Wikipedia Contributor",
+                                attribution=url
+                            )
+        except Exception as e:
+            print(f"[Wikimedia API Error]: {e}")
+    return None
 
-    if score_unsplash > score_wiki:
-        print(f"[ImageService] VLM picked Unsplash for '{query}'")
-        return unsplash_url
-    else:
-        print(f"[ImageService] VLM picked Wiki for '{query}'")
-        return wiki_url
+async def search_pexels(query: str) -> Optional[PlaceImage]:
+    if not PEXELS_API_KEY:
+        return None
+        
+    async with PEXELS_SEMAPHORE:
+        try:
+            async with httpx.AsyncClient() as client:
+                headers = {"Authorization": PEXELS_API_KEY}
+                params = {"query": query, "per_page": 1, "orientation": "landscape"}
+                res = await client.get("https://api.pexels.com/v1/search", headers=headers, params=params, timeout=8.0)
+                if res.status_code == 200:
+                    data = res.json()
+                    photos = data.get("photos", [])
+                    if photos:
+                        photo = photos[0]
+                        return PlaceImage(
+                            image_url=photo.get("src", {}).get("large2x", photo.get("src", {}).get("original")),
+                            source="Pexels",
+                            photographer=photo.get("photographer"),
+                            attribution=photo.get("url")
+                        )
+        except Exception as e:
+            print(f"[Pexels API Error]: {e}")
+    return None
 
+def normalize_query(place_name: str) -> str:
+    # Remove special characters
+    q = re.sub(r'[^\w\s]', '', place_name)
+    return q.strip()
 
+async def get_best_place_image(place_name: str) -> Optional[PlaceImage]:
+    # 1. Check Cache
+    safe_key = re.sub(r'[^a-zA-Z0-9]', '_', place_name.lower())
+    cached_json = await _cache_get(safe_key)
+    if cached_json:
+        try:
+            data = json.loads(cached_json)
+            print(f"[Cache Hit] Image for {place_name}")
+            return PlaceImage(**data)
+        except Exception:
+            pass
+            
+    q = normalize_query(place_name)
+    print(f"[ImageService] Fetching image for '{q}'")
+    
+    # 2. Openverse
+    img = await search_openverse(q)
+    if img and img.image_url:
+        print(f"[ImageService] Picked Openverse for {place_name}")
+        await _cache_set(safe_key, img.model_dump_json())
+        return img
+        
+    # 3. Wikimedia
+    img = await search_wikimedia(q)
+    if img and img.image_url:
+        print(f"[ImageService] Picked Wikimedia for {place_name}")
+        await _cache_set(safe_key, img.model_dump_json())
+        return img
+        
+    # 4. Pexels
+    img = await search_pexels(q)
+    if img and img.image_url:
+        print(f"[ImageService] Picked Pexels for {place_name}")
+        await _cache_set(safe_key, img.model_dump_json())
+        return img
+        
+    print(f"[ImageService] No image found for {place_name}")
+    return None
 
+# Keep a dummy fetch_real_image for backwards compatibility during migration
+async def fetch_real_image(query: str) -> Optional[str]:
+    img = await get_best_place_image(query)
+    return img.image_url if img else None

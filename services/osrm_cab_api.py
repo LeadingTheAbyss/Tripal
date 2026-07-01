@@ -5,10 +5,13 @@ from datetime import datetime, timedelta
 from models.entities import TransportOption
 from models.enums import TransportType
 
+import urllib.parse
+
 async def get_coordinates(city_name: str) -> Dict[str, float]:
     """Dynamically fetch coordinates using Nominatim API."""
-    url = f"https://nominatim.openstreetmap.org/search?q={city_name},+India&format=json&limit=1"
-    headers = {"User-Agent": "GhumiGhumiTravelApp/1.0 (contact@ghumighumi.com)"}
+    encoded_query = urllib.parse.quote(f"{city_name}, India")
+    url = f"https://nominatim.openstreetmap.org/search?q={encoded_query}&format=json&limit=1"
+    headers = {"User-Agent": "PlanBroTravelApp/1.0 (contact@planbro.com)"}
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers, timeout=10.0)

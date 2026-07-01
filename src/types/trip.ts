@@ -19,6 +19,7 @@ export type Passenger = {
   pincode: string;
   city: string;
   transportPreference: 'flight' | 'train' | 'bus' | 'cab' | 'any';
+  remember?: boolean;
 };
 
 export type TransportAvailability = 'Confirmed' | string; // e.g. 'WL 12'

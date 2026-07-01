@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Tripal - Premium Travel Itinerary Planner",
+  title: "PlanBro",
   description: "Plan your trip with real-time flight, train, and hotel data.",
 };
 

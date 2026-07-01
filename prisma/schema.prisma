@@ -75,3 +75,54 @@ model Hotel {
   
   @@unique([hotel_id, city, check_in_date, check_out_date])
 }
+
+model User {
+  id              String        @id @default(cuid())
+  email           String        @unique
+  name            String
+  picture         String?
+  apiCalls        Int           @default(0)
+  apiCallsFlights Int           @default(0)
+  apiCallsTrains  Int           @default(0)
+  apiCallsBusses  Int           @default(0)
+  apiCallsHotels  Int           @default(0)
+  apiCallsPlaces  Int           @default(0)
+  lastApiCallDate DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  sessions        Session[]
+  tripHistories   TripHistory[]
+  savedPassengers SavedPassenger[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model TripHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination String
+  snapshot    Json
+  createdAt   DateTime @default(now())
+}
+
+model SavedPassenger {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  age       Int
+  gender    String
+  city      String?
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, name])
+}

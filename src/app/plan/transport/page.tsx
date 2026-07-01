@@ -46,7 +46,7 @@ const LoadingScreen = ({ isFinished, onComplete }: { isFinished: boolean, onComp
       {/* Title Header (Top Right style alignment) */}
       <div className="absolute top-12 right-12 text-right z-50">
         <h1 className="text-4xl md:text-5xl font-black text-white tracking-wider drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] uppercase">
-          Ghumi-Ghumi
+          PlanBro
         </h1>
       </div>
 
@@ -125,7 +125,7 @@ export default function TransportPage() {
   const [transportMap, setTransportMap] = useState<Record<string, TransportOption[]>>({});
   const [loading, setLoading] = useState(false);
   const [backendFinished, setBackendFinished] = useState(true);
-  const [sortBy, setSortBy] = useState<'recommended' | 'cheapest' | 'fastest' | 'earliest'>('recommended');
+  const [sortBy, setSortBy] = useState<Record<string, 'recommended' | 'cheapest' | 'fastest' | 'earliest'>>({});
 
   const [routeModalOpen, setRouteModalOpen] = useState(false);
   const [liveModalOpen, setLiveModalOpen] = useState(false);
@@ -187,10 +187,10 @@ export default function TransportPage() {
   };
 
   const getTransportIcon = (type: string) => {
-    if (type === 'flight') return <Plane className="text-blue-500" size={20} />;
-    if (type === 'train') return <Train className="text-orange-500" size={20} />;
-    if (type === 'cab' || type === 'car') return <Car className="text-purple-500" size={20} />;
-    return <Bus className="text-green-500" size={20} />;
+    if (type === 'flight') return <Plane className="text-blue-500 shrink-0" size={20} />;
+    if (type === 'train') return <Train className="text-orange-500 shrink-0" size={20} />;
+    if (type === 'cab' || type === 'car') return <Car className="text-purple-500 shrink-0" size={20} />;
+    return <Bus className="text-green-500 shrink-0" size={20} />;
   };
 
   const parseDuration = (dur: string) => {
@@ -233,22 +233,6 @@ export default function TransportPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">Transport Options</h1>
             <p className="text-muted-foreground">Select how everyone is getting to <span className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => setStationBoardOpen(true)}>{trip.destination || 'the destination'}</span>.</p>
-            <button onClick={() => setStationBoardOpen(true)} className="mt-2 text-xs font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400 border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 rounded-full hover:bg-orange-500/20 transition-colors">
-              Explore Live Station Board
-            </button>
-          </div>
-          <div className="flex flex-col gap-1 text-right">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sort Options</label>
-            <select 
-              className="p-2 border border-border rounded-lg bg-card outline-none focus:border-primary text-sm font-medium text-foreground cursor-pointer shadow-sm transition-colors"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-            >
-              <option value="recommended">★ Recommended</option>
-              <option value="cheapest">Cheapest First</option>
-              <option value="fastest">Fastest First</option>
-              <option value="earliest">Earliest Departure</option>
-            </select>
           </div>
         </motion.div>
 
@@ -279,19 +263,6 @@ export default function TransportPage() {
             >
               {trip.passengers.map((pax) => {
                 const rawOptions = transportMap[pax.id] || [];
-                
-                // Sort options based on user preference
-                let options = [...rawOptions];
-                if (sortBy === 'cheapest') {
-                  options.sort((a, b) => a.price - b.price);
-                } else if (sortBy === 'fastest') {
-                  options.sort((a, b) => parseDuration(a.duration) - parseDuration(b.duration));
-                } else if (sortBy === 'earliest') {
-                  options.sort((a, b) => parseTime(a.departure) - parseTime(b.departure));
-                } else {
-                  // 'recommended'
-                  options = [...rawOptions];
-                }
 
                 const selectedTransportId = trip.selectedTransports.find(t => t.passengerId === pax.id)?.transportOptionId;
 
@@ -322,7 +293,17 @@ export default function TransportPage() {
                         const isFetched = fetchedModes[key];
                         const isLoading = loadingMode[key];
 
-                        const typeOptions = options.filter(o => o.type === type || (type === 'cab' && o.type === 'car'));
+                        const typeOptionsRaw = rawOptions.filter(o => o.type === type || (type === 'cab' && o.type === 'car'));
+                        
+                        const currentSort = sortBy[key] || '';
+                        let typeOptions = [...typeOptionsRaw];
+                        if (currentSort === 'cheapest') {
+                          typeOptions.sort((a, b) => a.price - b.price);
+                        } else if (currentSort === 'fastest') {
+                          typeOptions.sort((a, b) => parseDuration(a.duration) - parseDuration(b.duration));
+                        } else if (currentSort === 'earliest') {
+                          typeOptions.sort((a, b) => parseTime(a.departure) - parseTime(b.departure));
+                        }
                         
                         const currentActive = activeTabs[pax.id] ?? '';
                         const isActive = currentActive === type && (isFetched ? typeOptions.length > 0 : true);
@@ -371,12 +352,26 @@ export default function TransportPage() {
                                   <div className="p-4 space-y-3 bg-muted/20 border-t-2 border-border">
                                     {isLoading ? (
                                       <div className="flex items-center justify-center p-8 text-muted-foreground font-medium">
-                                        <Loader2 className="animate-spin mr-3" size={20} /> Searching live {type === 'bus' ? 'buses' : type + 's'}...
+                                        <Loader2 className="animate-spin mr-3 shrink-0" size={20} /> Searching live {type === 'bus' ? 'buses' : type + 's'}...
                                       </div>
-                                    ) : typeOptions.map((opt, idx) => {
+                                    ) : (
+                                      <>
+                                        {typeOptions.length > 0 && (
+                                          <div className="flex justify-end mb-2">
+                                            <select 
+                                              className="p-1.5 border border-border rounded-lg bg-background outline-none focus:border-primary text-xs font-medium text-foreground cursor-pointer shadow-sm transition-colors"
+                                              value={currentSort}
+                                              onChange={(e) => setSortBy({ ...sortBy, [key]: e.target.value as any })}
+                                            >
+                                              <option value="" disabled>Select here</option>
+                                              <option value="cheapest">Cheapest First</option>
+                                              <option value="fastest">Fastest First</option>
+                                              <option value="earliest">Earliest Departure</option>
+                                            </select>
+                                          </div>
+                                        )}
+                                        {typeOptions.map((opt, idx) => {
                                           const isSelected = selectedTransportId === opt.id;
-                                          const isRecommended = sortBy === 'recommended' && opt.recommendationScore > 85;
-
                                           return (
                                             <motion.div 
                                               initial={{ opacity: 0, x: -10 }}
@@ -396,9 +391,9 @@ export default function TransportPage() {
                                             >
                                   <div className="flex items-center gap-4">
                                     {isSelected ? (
-                                      <CheckCircle2 className="text-primary" />
+                                      <CheckCircle2 className="text-primary shrink-0" size={24} />
                                     ) : (
-                                      <Circle className="text-muted-foreground/50" />
+                                      <Circle className="text-muted-foreground/50 shrink-0" size={24} />
                                     )}
                                     
                                     <div className="p-3 bg-background rounded-lg shadow-sm border border-border">
@@ -408,11 +403,6 @@ export default function TransportPage() {
                                     <div>
                                       <div className="flex items-center gap-2">
                                         <span className="font-bold uppercase tracking-wider text-sm">{opt.provider || opt.type}</span>
-                                        {isRecommended && (
-                                          <span className="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 border border-yellow-500/30 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                            ★ RECOMMENDED
-                                          </span>
-                                        )}
                                       </div>
                                         <div className="text-sm text-muted-foreground mt-1">
                                           {opt.departure} <ArrowRight className="inline mx-1" size={14}/> {opt.arrival} ({opt.duration})
@@ -449,7 +439,9 @@ export default function TransportPage() {
                                             </motion.div>
                                           );
                                         })}
-                                      </div>
+                                      </>
+                                    )}
+                                  </div>
                                     </motion.div>
                                   )}
                                 </AnimatePresence>

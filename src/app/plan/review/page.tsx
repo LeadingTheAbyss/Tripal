@@ -70,6 +70,47 @@ export default function ReviewPage() {
 
   const warnings = generateWarnings();
 
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const handleSaveTrip = async () => {
+    setIsSaving(true);
+    try {
+      const snapshot = {
+        passengers: trip.passengers,
+        selectedTransports: trip.selectedTransports,
+        selectedHotel: trip.selectedHotel,
+        itinerary: itinerary.days,
+        budget: {
+          total: budget.totalBudget,
+          spent: budget.spentTransport + budget.spentHotels + budget.spentPlaces,
+          remaining: budget.remaining
+        }
+      };
+
+      const res = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination: trip.destination || 'Unknown Destination',
+          snapshot
+        })
+      });
+
+      if (res.ok) {
+        alert('Trip saved successfully! You can view it in your profile.');
+        router.push('/profile');
+      } else {
+        const error = await res.json();
+        alert(`Failed to save trip: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Save trip error:', error);
+      alert('An error occurred while saving the trip.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-24">
       <div className="text-center mb-12">
@@ -213,10 +254,11 @@ export default function ReviewPage() {
       {/* CONTINUATION */}
       <div className="flex justify-center pt-8">
         <button 
-          onClick={() => alert('Trip saved! In a real app, this would lock the snapshot in the database.')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-xl font-bold flex items-center gap-2 shadow-xl transition-transform hover:-translate-y-1 text-lg"
+          onClick={handleSaveTrip}
+          disabled={isSaving}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-xl font-bold flex items-center gap-2 shadow-xl transition-transform hover:-translate-y-1 text-lg disabled:opacity-50"
         >
-          <CheckCircle size={24} /> Confirm & Save Trip
+          {isSaving ? 'Saving...' : <><CheckCircle size={24} /> Confirm & Save Trip</>}
         </button>
       </div>
 

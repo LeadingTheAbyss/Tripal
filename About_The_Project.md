@@ -1,7 +1,7 @@
-# Ghumi-Ghumi (Tripal) - Premium Travel Itinerary Planner
+# PlanBro (Tripal) - Premium Travel Itinerary Planner
 
 ## 🎯 What is the Purpose?
-Ghumi-Ghumi (also known as Tripal) is an advanced, full-stack travel itinerary planner designed to remove the friction from planning trips. Instead of keeping a million tabs open for flights, trains, hotels, and attractions, this platform consolidates everything into a single, seamless, and visually stunning experience.
+PlanBro (also known as Tripal) is an advanced, full-stack travel itinerary planner designed to remove the friction from planning trips. okInstead of keeping a million tabs open for flights, trains, hotels, and attractions, this platform consolidates everything into a single, seamless, and visually stunning experience.
 
 It takes user preferences—such as source, destination, travel dates, passenger details, and a total budget—and generates a highly optimized, fully ranked itinerary. It intelligently calculates the best transport modes, fetches real-time places of interest, retrieves live images, and even provides AI-driven recommendations based on the travel group's profile.
 

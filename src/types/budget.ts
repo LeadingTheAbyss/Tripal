@@ -4,6 +4,7 @@ export type BudgetState = {
   spentPlaces: number;
   spentHotels: number;
   spentCommute: number;
+  spentFood: number;
   remaining: number;
   projectedTotal: number;
 };

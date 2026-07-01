@@ -86,10 +86,10 @@ async def get_places(destination: str):
     )
     places = await asyncio.to_thread(rank_places, destination, trip, Weather.SUNNY)
     
-    from services.image_service import fetch_real_image
+    from services.image_service import get_best_place_image
     # Fetch images concurrently
-    image_tasks = [fetch_real_image(f"{p.name} {destination}") for p in places]
-    image_urls = await asyncio.gather(*image_tasks)
+    image_tasks = [get_best_place_image(f"{p.name} {destination}") for p in places]
+    place_images = await asyncio.gather(*image_tasks)
     
     result = []
     for i, p in enumerate(places):
@@ -99,7 +99,8 @@ async def get_places(destination: str):
             "category": p.category.lower() if isinstance(p.category, str) else str(p.category),
             "visitDurationHours": p.visit_duration_hours,
             "crowdScore": p.crowd_estimate.value,
-            "recommendationScore": 90 - i
+            "recommendationScore": 90 - i,
+            "imageUrl": place_images[i].image_url if place_images[i] else None
         })
     return result
 
@@ -115,9 +116,9 @@ async def get_food(destination: str):
     )
     places = await asyncio.to_thread(rank_food, destination, trip, Weather.SUNNY)
     
-    from services.image_service import fetch_real_image
-    image_tasks = [fetch_real_image(f"{p.name} {destination} food") for p in places]
-    image_urls = await asyncio.gather(*image_tasks)
+    from services.image_service import get_best_place_image
+    image_tasks = [get_best_place_image(f"{p.name} {destination} food") for p in places]
+    place_images = await asyncio.gather(*image_tasks)
     
     result = []
     for i, p in enumerate(places):
@@ -128,7 +129,7 @@ async def get_food(destination: str):
             "visitDurationHours": p.visit_duration_hours,
             "crowdScore": p.crowd_estimate.value,
             "recommendationScore": 90 - i,
-            "imageUrl": image_urls[i]
+            "imageUrl": place_images[i].image_url if place_images[i] else None
         })
     return result
 
@@ -177,12 +178,9 @@ from fastapi.responses import JSONResponse
 
 @app.get("/api/image")
 async def get_place_image(q: str):
-    from services.image_service import fetch_real_image
-    url = await fetch_real_image(q)
-    response = JSONResponse(content={"url": url})
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    return response
+    from services.image_service import get_best_place_image
+    img = await get_best_place_image(q)
+    return {"url": img.image_url if img else None}
 
 import requests
 from typing import List, Dict, Any
@@ -275,3 +273,38 @@ def _fetch_photon_cities(q: str) -> List[Dict[str, Any]]:
 @app.get("/api/search-city")
 async def search_city(q: str = "") -> List[Dict[str, Any]]:
     return await asyncio.to_thread(_fetch_photon_cities, q)
+
+import subprocess
+
+@app.get("/api/git-login")
+def get_git_login():
+    try:
+        res = subprocess.run(['git', 'log', '-p', 'src/app/login/page.tsx'], capture_output=True, text=True)
+        return {"content": res.stdout}
+    except Exception as e:
+        return {"error": str(e)}
+
+import os
+@app.get("/api/find-logo")
+def find_logo():
+    import glob
+    files = glob.glob("**/*logo*", recursive=True)
+    return {"files": files}
+
+import shutil
+@app.get("/api/move-logos")
+def move_logos():
+    try:
+        import os
+        if os.path.exists('small_logo.png'):
+            shutil.move('small_logo.png', 'src/app/icon.png')
+        
+        if os.path.exists('large_logo.png'):
+            shutil.move('large_logo.png', 'public/large_logo.png')
+
+        if os.path.exists('src/app/favicon.ico'):
+            os.remove('src/app/favicon.ico')
+
+        return {"status": "Success"}
+    except Exception as e:
+        return {"error": str(e)}

@@ -6,8 +6,8 @@ import { BudgetState } from '../types/budget';
 interface BudgetStoreState extends BudgetState {
   // Actions
   setTotalBudget: (amount: number) => void;
-  addExpense: (category: 'transport' | 'places' | 'hotel' | 'commute', amount: number) => void;
-  refundExpense: (category: 'transport' | 'places' | 'hotel' | 'commute', amount: number) => void;
+  addExpense: (category: 'transport' | 'places' | 'hotel' | 'commute' | 'food', amount: number) => void;
+  refundExpense: (category: 'transport' | 'places' | 'hotel' | 'commute' | 'food', amount: number) => void;
   recalcBudget: () => void;
   reset: () => void;
 }
@@ -20,12 +20,14 @@ export const useBudgetStore = create<BudgetStoreState>()(
   spentPlaces: 0,
   spentHotels: 0,
   spentCommute: 0,
+  spentFood: 0,
   remaining: 0,
   projectedTotal: 0,
 
   setTotalBudget: (amount) => set((state) => {
-    const remaining = amount - state.projectedTotal;
-    return { totalBudget: amount, remaining };
+    const totalSpent = (state.spentTransport || 0) + (state.spentPlaces || 0) + (state.spentHotels || 0) + (state.spentCommute || 0) + (state.spentFood || 0);
+    const remaining = amount - totalSpent;
+    return { totalBudget: amount, projectedTotal: totalSpent, remaining };
   }),
 
   addExpense: (category, amount) => set((state) => {
@@ -33,10 +35,16 @@ export const useBudgetStore = create<BudgetStoreState>()(
     if (category === 'transport') key = 'spentTransport';
     else if (category === 'places') key = 'spentPlaces';
     else if (category === 'hotel') key = 'spentHotels';
+    else if (category === 'food') key = 'spentFood';
     else key = 'spentCommute';
 
-    const newSpent = state[key] + amount;
-    return { [key]: newSpent };
+    const newSpent = ((state[key] as number) || 0) + amount;
+    const newState = { ...state, [key]: newSpent };
+    
+    const totalSpent = (newState.spentTransport || 0) + (newState.spentPlaces || 0) + (newState.spentHotels || 0) + (newState.spentCommute || 0) + (newState.spentFood || 0);
+    const remaining = (newState.totalBudget || 0) - totalSpent;
+
+    return { ...newState, projectedTotal: totalSpent, remaining };
   }),
 
   refundExpense: (category, amount) => set((state) => {
@@ -44,15 +52,21 @@ export const useBudgetStore = create<BudgetStoreState>()(
     if (category === 'transport') key = 'spentTransport';
     else if (category === 'places') key = 'spentPlaces';
     else if (category === 'hotel') key = 'spentHotels';
+    else if (category === 'food') key = 'spentFood';
     else key = 'spentCommute';
 
-    const newSpent = Math.max(0, state[key] - amount);
-    return { [key]: newSpent };
+    const newSpent = Math.max(0, ((state[key] as number) || 0) - amount);
+    const newState = { ...state, [key]: newSpent };
+    
+    const totalSpent = (newState.spentTransport || 0) + (newState.spentPlaces || 0) + (newState.spentHotels || 0) + (newState.spentCommute || 0) + (newState.spentFood || 0);
+    const remaining = (newState.totalBudget || 0) - totalSpent;
+
+    return { ...newState, projectedTotal: totalSpent, remaining };
   }),
 
   recalcBudget: () => set((state) => {
-    const totalSpent = state.spentTransport + state.spentPlaces + state.spentHotels + state.spentCommute;
-    const remaining = state.totalBudget - totalSpent;
+    const totalSpent = (state.spentTransport || 0) + (state.spentPlaces || 0) + (state.spentHotels || 0) + (state.spentCommute || 0) + (state.spentFood || 0);
+    const remaining = (state.totalBudget || 0) - totalSpent;
 
     return {
       projectedTotal: totalSpent,
@@ -66,6 +80,7 @@ export const useBudgetStore = create<BudgetStoreState>()(
     spentPlaces: 0,
     spentHotels: 0,
     spentCommute: 0,
+    spentFood: 0,
     remaining: 0,
     projectedTotal: 0
   })

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { trackApiCall } from '@/lib/metrics';
 
 const prisma = new PrismaClient();
 const CACHE_HOURS = 12;
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
       const hoursSinceUpdate = (Date.now() - new Date(cachedPnr.updatedAt).getTime()) / (1000 * 60 * 60);
       if (hoursSinceUpdate < CACHE_HOURS) {
         console.log(`[PNR] Returning cached data for ${pnr}`);
+        await trackApiCall('/api/pnr (cached)');
         return NextResponse.json({ success: true, cached: true, data: cachedPnr.data });
       }
     }
@@ -64,6 +66,7 @@ export async function GET(request: Request) {
       }
     });
 
+    await trackApiCall('/api/pnr (fetch)');
     return NextResponse.json({ success: true, cached: false, data: data.data });
 
   } catch (error: any) {

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
+import { UserAvatar } from '@/components/UserAvatar';
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import gsap from 'gsap';
@@ -10,8 +12,21 @@ import { ArrowRight, Sparkles, Search, Globe, ChevronDown, Train, Map } from 'lu
 
 export default function LandingPage() {
   const router = useRouter();
+  const { user, fetchUser } = useAuthStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handleNavigation = (path: string) => {
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent(path)}`);
+    } else {
+      router.push(path);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   useEffect(() => {
     // Register GSAP Plugin
@@ -483,38 +498,34 @@ export default function LandingPage() {
 
   return (
     <div className="landing-body bg-[#dfddd5] text-[#151515]" ref={containerRef} style={{ backgroundColor: '#D0CBC7' }}>
-      {/* Epic Games Style Navbar */}
-      <nav className="absolute top-0 left-0 w-full z-[100] flex items-center justify-between px-4 py-3 bg-[#151515] text-[#E2E2E2] font-sans border-b border-black/50 shadow-md">
+      {/* Clean Navbar */}
+      <nav className="absolute top-0 left-0 w-full z-[100] flex items-center justify-between px-6 py-4 bg-[#282828] border-b border-[#3e3e3e] text-white font-sans transition-all duration-300">
         
         {/* Left: Logos and Links */}
         <div className="flex items-center gap-6">
-          {/* Faux "Epic" Logo area */}
-          <div className="flex items-center gap-3 border-r border-white/10 pr-4 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-8 h-9 bg-white text-black flex items-center justify-center font-black text-[10px] leading-tight text-center rounded-sm">
-              TRIP<br/>AL
-            </div>
-            <ChevronDown size={14} className="text-white/50" />
-          </div>
-
           {/* Main Logo */}
-          <div className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-            <div className="w-7 h-7 rounded-full border-[2.5px] border-current flex items-center justify-center">
-              <span className="font-bold text-sm leading-none mt-0.5">g</span>
+          <div className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="relative w-28 h-10 flex-shrink-0">
+              <img 
+                src="/large_logo.png" 
+                alt="PlanBro Logo" 
+                className="absolute -top-3 -left-2 h-16 w-auto max-w-none object-contain" 
+              />
             </div>
-            <span className="font-extrabold text-lg tracking-tight text-white mt-0.5">TRIPAL ENGINE</span>
+            <span className="font-extrabold text-2xl tracking-tight text-white drop-shadow-md z-10 relative">PlanBro</span>
           </div>
 
           {/* Links */}
-          <div className="hidden lg:flex items-center gap-8 ml-6">
+          <div className="hidden lg:flex items-center gap-10 ml-20">
             <button 
-              onClick={() => router.push('/recommend')} 
-              className="text-[13px] tracking-wide font-medium opacity-80 hover:opacity-100 hover:text-white transition-all"
+              onClick={() => handleNavigation('/recommend')} 
+              className="text-base tracking-wide font-bold text-white/80 hover:text-white hover:scale-105 transition-all"
             >
               Recommend Trips
             </button>
             <button 
-              onClick={() => router.push('/plan/setup')} 
-              className="text-[13px] tracking-wide font-medium opacity-80 hover:opacity-100 hover:text-white transition-all"
+              onClick={() => handleNavigation('/plan/setup')} 
+              className="text-base tracking-wide font-bold text-white/80 hover:text-white hover:scale-105 transition-all"
             >
               Plan a Trip
             </button>
@@ -523,27 +534,23 @@ export default function LandingPage() {
 
         {/* Right Action */}
         <div className="flex items-center gap-4">
-          {/* Search Bar */}
-          <div className="hidden xl:flex items-center bg-[#202020] rounded-full px-4 py-1.5 border border-transparent hover:bg-[#2A2A2E] transition-colors w-56">
-            <Search size={16} className="text-white/50 mr-2" />
-            <input 
-              type="text" 
-              placeholder="Search" 
-              className="bg-transparent border-none outline-none text-[13px] text-white placeholder-white/50 w-full font-medium"
-            />
-          </div>
 
-          <button className="hover:text-white transition-colors p-1 hidden sm:block">
-            <Globe size={20} className="text-white/70" />
-          </button>
-          
-          <button className="px-4 py-2 rounded bg-[#2A2A2E] hover:bg-[#3A3A3E] text-white text-[13px] font-bold transition-colors">
-            Sign in
-          </button>
-
-          <button className="px-4 py-2 rounded bg-[#007BED] hover:bg-[#3395F0] text-black text-[13px] font-bold transition-colors">
-            Download
-          </button>
+          {user ? (
+            <button 
+              onClick={() => router.push('/profile')}
+              className="w-8 h-8 rounded-full border-2 border-white/20 hover:border-white transition-all overflow-hidden flex items-center justify-center"
+              title="Profile"
+            >
+              <UserAvatar user={user} className="w-full h-full text-xs" />
+            </button>
+          ) : (
+            <button 
+              onClick={() => router.push('/login')}
+              className="px-4 py-2 rounded bg-[#2A2A2E] hover:bg-[#3A3A3E] text-white text-[13px] font-bold transition-colors"
+            >
+              Sign in
+            </button>
+          )}
         </div>
       </nav>
 
@@ -556,43 +563,43 @@ export default function LandingPage() {
           <div className="parallax ground" style={{ backgroundImage: 'url("https://assets.codepen.io/557388/background-reduced.jpg"), linear-gradient(to bottom, #b4afaa, #D0CBC7)', zIndex: 0 }}></div>
           
           <div className="section relative z-50">
-            <h1 className="!text-black" style={{ color: '#000000' }}>Ghumi-Ghumi.</h1>
-            <h3 className="!text-black" style={{ color: '#000000' }}>The beginner's guide to planning.</h3>
-            <p className="!text-black" style={{ color: '#000000' }}>You've probably forgotten how easy it can be.</p>
+            <h1 className="!text-black" style={{ color: '#000000' }}>PlanBro.</h1>
+            <h3 className="!text-black" style={{ color: '#000000' }}>We plan the trip. You pack your bags.</h3>
+            <p className="!text-black" style={{ color: '#000000' }}>The trip you'd plan yourself, if you had the time.</p>
             <div className="scroll-cta !text-black" style={{ color: '#000000' }}>Scroll down</div>
           </div>
           
           <div className="section right relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
-              <h2 className="!text-black" style={{ color: '#000000' }}>It starts with a destination...</h2>
+              <h2 className="!text-black" style={{ color: '#000000' }}>Trip planning shouldn't feel like a part-time job.</h2>
             </div>
           </div>
 
           <div className="section relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl text-left">
-              <h2 className="!text-black" style={{ color: '#000000' }}>..but quickly becomes complex.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Hotels, budgets, schedules!?</p>
+              <h2 className="!text-black" style={{ color: '#000000' }}>Leave the details to us.</h2>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">No tabs. No spreadsheets. No back-and-forth over budgets.</p>
             </div>
           </div>
 
           <div className="section right relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
-              <h2 className="!text-black" style={{ color: '#000000' }}>And a million open tabs.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Flights, trains, hotels everywhere.</p>
+              <h2 className="!text-black" style={{ color: '#000000' }}>We find the way there.</h2>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Flights, trains, and buses, quietly compared until only the best remains.</p>
             </div>
           </div>
 
           <div className="section relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl text-left">
-              <h2 className="!text-black" style={{ color: '#000000' }}>We handle the logistics.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">For realsies!</p>
+              <h2 className="!text-black" style={{ color: '#000000' }}>Your whole trip, stitched together.</h2>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Stays, experiences, and timing, all laid out in one clean plan.</p>
             </div>
           </div>
           
           <div className="section right relative z-50">
             <div className="inline-block max-w-2xl backdrop-blur-xl bg-white/40 p-8 md:p-12 rounded-3xl border border-white/50 shadow-xl">
-              <h2 className="!text-black" style={{ color: '#000000' }}>Defying all known planning stress.</h2>
-              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">It's actual magic!</p>
+              <h2 className="!text-black" style={{ color: '#000000' }}>Less planning. More going.</h2>
+              <p className="text-xl md:text-2xl inline-block w-fit bg-gradient-to-r from-[#5a5bc8] to-[#c272a9] bg-clip-text text-transparent font-bold mt-2">Stop juggling logistics. Start the trip.</p>
             </div>
           </div>
           <div className="parallax clouds"></div>
@@ -613,47 +620,40 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto px-6 relative z-10">
               {/* Card 1: Recommend Mode */}
               <div 
-                onClick={() => router.push('/recommend')}
-                className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl cursor-pointer hover:bg-white/20 transition-all hover:scale-105 group flex flex-col justify-between"
+                onClick={() => handleNavigation('/recommend')}
+                className="bg-white/10 backdrop-blur-md border border-white/20 p-10 min-h-[240px] rounded-3xl cursor-pointer hover:bg-white/20 transition-all hover:scale-105 group flex flex-col justify-between h-full"
               >
                 <div>
-                  <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center mb-5">
-                    <Sparkles className="text-white" size={24} />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Recommend a Trip</h3>
-                  <p className="text-zinc-300 text-base mb-6 leading-relaxed">
-                    "We are 4 friends with ₹25k each. Recommend places for us."
+
+                  <h3 className="text-2xl font-bold text-white !mb-4">Discovery Engine</h3>
+                  <p className="text-zinc-300 text-lg mb-6 leading-snug">
+                    "Not sure where to go? Tell us your budget and vibe. We'll show you where."
                   </p>
                 </div>
                 <div className="flex items-center text-white font-bold group-hover:translate-x-2 transition-transform">
-                  Discovery Engine <ArrowRight className="ml-2 w-5 h-5" />
+                  Explore Destinations <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </div>
 
               {/* Card 2: Direct Planning Mode */}
               <div 
-                onClick={() => router.push('/plan/setup')}
-                className="bg-blue-600 border border-blue-500 p-6 rounded-3xl cursor-pointer hover:bg-blue-500 transition-all duration-300 hover:scale-105 group shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_60px_-15px_rgba(37,99,235,0.7)] flex flex-col justify-between"
+                onClick={() => handleNavigation('/plan/setup')}
+                className="bg-blue-600 border border-blue-500 p-10 min-h-[240px] rounded-3xl cursor-pointer hover:bg-blue-500 transition-all duration-300 hover:scale-105 group shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_60px_-15px_rgba(37,99,235,0.7)] flex flex-col justify-between h-full"
               >
                 <div>
-                  <div className="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center mb-5">
-                    <Map className="text-primary w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Plan My Trip</h3>
-                  <p className="text-blue-100 text-base mb-6 leading-relaxed">
-                    "I already know I'm going to Manali. Plan the logistics for me."
+
+                  <h3 className="text-2xl font-bold text-white !mb-4">Generate Itinerary</h3>
+                  <p className="text-blue-100 text-lg mb-6 leading-snug">
+                    "Know your destination? Give us the details. We'll lock down the flights, stays, and logistics."
                   </p>
                 </div>
                 <div className="flex items-center text-white font-bold group-hover:translate-x-2 transition-transform">
-                  Start Planning Now <ArrowRight className="ml-2 w-5 h-5" />
+                  Start Planning <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </div>
             </div>
 
-            <ul className="credits mt-32 text-center text-zinc-400 text-xs">
-              <li>Plane model by <a href="https://poly.google.com/view/8ciDd9k8wha" target="_blank" rel="noreferrer" className="underline">Google</a></li>
-              <li>Animated using <a href="https://greensock.com/scrolltrigger/" target="_blank" rel="noreferrer" className="underline">GSAP ScrollTrigger</a></li>
-            </ul>
+
           </div>
         </div>
       </div>
