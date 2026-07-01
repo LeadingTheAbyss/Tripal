@@ -26,7 +26,7 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/admin/user/${userId}/stats`);
+        const res = await fetch(`/api/admin/user/${userId}/stats?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch telemetry');
         const json = await res.json();
         setStats(json.stats || []);
@@ -39,11 +39,17 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
     fetchStats();
   }, [userId]);
 
-  // Generate last 30 days
-  const last30Days = Array.from({ length: 30 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (29 - i));
-    return d.toISOString().split('T')[0];
+  // Generate days for the current month
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  const currentMonthDays = Array.from({ length: daysInMonth }).map((_, i) => {
+    const y = year;
+    const m = String(month + 1).padStart(2, '0');
+    const d = String(i + 1).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   });
 
   // Map stats to days
@@ -52,7 +58,7 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
     return acc;
   }, {} as Record<string, DailyStat>);
 
-  const chartData = last30Days.map(date => ({
+  const chartData = currentMonthDays.map(date => ({
     date,
     apiCalls: statsMap[date]?.apiCalls || 0,
     loginCount: statsMap[date]?.loginCount || 0,
@@ -90,7 +96,7 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
 
           <div className="mb-8">
             <h2 className="text-2xl font-light text-white mb-1">Telemetry: {userName}</h2>
-            <p className="text-xs font-mono text-white/40 uppercase tracking-widest">30-Day Activity History</p>
+            <p className="text-xs font-mono text-white/40 uppercase tracking-widest">Current Month Activity</p>
           </div>
 
           {loading ? (
@@ -110,7 +116,7 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
                   <h3 className="text-sm font-bold text-white/80 uppercase tracking-widest">Network Requests (API)</h3>
                 </div>
                 
-                <div className="h-48 flex items-end gap-2 w-full overflow-x-auto pb-4 custom-scrollbar">
+                <div className="h-48 flex items-end gap-2 w-full overflow-hidden pb-4">
                   {chartData.map((data, i) => (
                     <div key={data.date} className="flex flex-col items-center gap-2 flex-1 min-w-[20px] group relative">
                       {/* Tooltip */}
@@ -129,7 +135,7 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
                           <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
                         </motion.div>
                       </div>
-                      <span className="text-[8px] text-white/30 font-mono rotate-45 origin-left w-4 overflow-visible">
+                      <span className="text-[9px] text-white/40 font-mono text-center w-full mt-1">
                         {new Date(data.date).getDate()}
                       </span>
                     </div>
@@ -139,9 +145,14 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
 
               {/* Logins Timeline */}
               <div>
-                <div className="flex items-center gap-2 mb-6">
-                  <CalendarDays size={16} className="text-purple-500" />
-                  <h3 className="text-sm font-bold text-white/80 uppercase tracking-widest">Authentication Log</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays size={16} className="text-emerald-500" />
+                    <h3 className="text-sm font-bold text-white/80 uppercase tracking-widest">Authentication Log</h3>
+                  </div>
+                  <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest border border-white/10 px-3 py-1 rounded-full bg-white/5">
+                    {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
@@ -155,7 +166,7 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
                         transition={{ delay: 0.5 + (i * 0.02) }}
                         className={`group relative flex items-center justify-center w-8 h-8 rounded-lg border text-xs font-mono cursor-default transition-all duration-300
                           ${isActive 
-                            ? 'bg-purple-500/20 border-purple-500/50 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.4)]' 
+                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.4)]' 
                             : 'bg-white/5 border-white/5 text-white/20 hover:border-white/20'
                           }
                         `}
@@ -163,7 +174,7 @@ export const UserTelemetryModal: React.FC<UserTelemetryModalProps> = ({ userId, 
                         {new Date(data.date).getDate()}
                         
                         {isActive && (
-                          <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-purple-500/30 px-2 py-1 rounded text-[10px] font-mono whitespace-nowrap z-10 pointer-events-none text-purple-200">
+                          <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-emerald-500/30 px-2 py-1 rounded text-[10px] font-mono whitespace-nowrap z-10 pointer-events-none text-emerald-200">
                             {data.loginCount} login(s)<br/>
                             <span className="text-white/40">{new Date(data.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           </div>

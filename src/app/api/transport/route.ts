@@ -84,12 +84,15 @@ export async function GET(req: Request) {
       }
     });
 
-    const todayString = now.toISOString().split('T')[0];
-    await prisma.dailyUserStat.upsert({
-      where: { userId_date: { userId: user.id, date: todayString } },
-      update: { apiCalls: { increment: 1 } },
-      create: { userId: user.id, date: todayString, apiCalls: 1 }
-    });
+    const nowIST = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    const todayString = `${nowIST.getFullYear()}-${String(nowIST.getMonth()+1).padStart(2,'0')}-${String(nowIST.getDate()).padStart(2,'0')}`;
+    if (prisma.dailyUserStat) {
+      await prisma.dailyUserStat.upsert({
+        where: { userId_date: { userId: user.id, date: todayString } },
+        update: { apiCalls: { increment: 1 } },
+        create: { userId: user.id, date: todayString, apiCalls: 1 }
+      });
+    }
 
     // 3. Proxy to Python Backend
     const response = await fetch(`${PYTHON_API_URL}/transport?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}&mode=${mode}`);

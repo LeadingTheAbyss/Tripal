@@ -55,23 +55,26 @@ export async function POST(req: Request) {
     });
 
     // Track daily login
-    const today = new Date().toISOString().split('T')[0];
-    await prisma.dailyUserStat.upsert({
-      where: {
-        userId_date: {
+    const nowIST = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    const today = `${nowIST.getFullYear()}-${String(nowIST.getMonth()+1).padStart(2,'0')}-${String(nowIST.getDate()).padStart(2,'0')}`;
+    if (prisma.dailyUserStat) {
+      await prisma.dailyUserStat.upsert({
+        where: {
+          userId_date: {
+            userId: user.id,
+            date: today,
+          }
+        },
+        update: {
+          loginCount: { increment: 1 }
+        },
+        create: {
           userId: user.id,
           date: today,
+          loginCount: 1,
         }
-      },
-      update: {
-        loginCount: { increment: 1 }
-      },
-      create: {
-        userId: user.id,
-        date: today,
-        loginCount: 1,
-      }
-    });
+      });
+    }
 
     // Set cookie
     const response = NextResponse.json({ user });

@@ -10,10 +10,11 @@ const ADMIN_EMAILS = [
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
-    const { id } = await context.params;
+    const params = await Promise.resolve(context.params);
+    const id = params.id;
     const cookieStore = await cookies();
     const token = cookieStore.get('planbro_session')?.value;
 
@@ -39,17 +40,20 @@ export async function GET(
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const dateString = thirtyDaysAgo.toISOString().split('T')[0];
 
-    const stats = await prisma.dailyUserStat.findMany({
-      where: {
-        userId: id,
-        date: {
-          gte: dateString
+    let stats: any[] = [];
+    if (prisma.dailyUserStat) {
+      stats = await prisma.dailyUserStat.findMany({
+        where: {
+          userId: id,
+          date: {
+            gte: dateString
+          }
+        },
+        orderBy: {
+          date: 'asc'
         }
-      },
-      orderBy: {
-        date: 'asc'
-      }
-    });
+      });
+    }
 
     return NextResponse.json({ stats });
   } catch (error) {

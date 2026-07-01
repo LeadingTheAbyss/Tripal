@@ -4,9 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
-import { Users, Compass, Activity, ArrowLeft, RefreshCw, BarChart2 } from 'lucide-react';
+import { Users, Compass, Activity, ArrowLeft, RefreshCw, BarChart2, TrendingUp, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserTelemetryModal } from './UserTelemetryModal';
 
 const ADMIN_EMAILS = [
   'kartikeykumarsingh27jun2006@gmail.com',
@@ -17,8 +16,9 @@ const ADMIN_EMAILS = [
 interface StatsData {
   stats: {
     totalUsers: number;
-    totalTrips: number;
     totalApiCallsToday: number;
+    totalApiCallsAllTime?: number;
+    apiCallsYesterday?: number;
     apiBreakdown: Record<string, number>;
   };
   users: Array<{
@@ -131,7 +131,6 @@ export default function AdminStatsPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-  const [selectedUserForModal, setSelectedUserForModal] = useState<{ id: string, name: string } | null>(null);
 
   useEffect(() => {
     fetchUser();
@@ -256,11 +255,16 @@ export default function AdminStatsPage() {
             {/* KPI 2 */}
             <motion.div variants={itemVariants} className="col-span-1 md:col-span-4 bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 relative overflow-hidden group hover:border-white/20 transition-all">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-indigo-500/10 transition-colors duration-700" />
-              <div className="text-white/40 flex items-center gap-2 text-xs font-bold uppercase tracking-widest mb-6">
-                <Compass size={16} /> Total Missions
+              <div className="text-white/40 flex flex-col mb-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                  <Compass size={16} /> API Calls (All Time)
+                </div>
+                <div className="text-[10px] text-white/20 uppercase tracking-widest mt-1">
+                  Sum of all lifetime requests by all users
+                </div>
               </div>
               <div className="text-7xl font-light text-white tracking-tighter">
-                <Counter value={data.stats.totalTrips} />
+                <Counter value={data.stats.totalApiCallsAllTime || 0} />
               </div>
             </motion.div>
 
@@ -270,8 +274,15 @@ export default function AdminStatsPage() {
               <div className="text-white/40 flex items-center gap-2 text-xs font-bold uppercase tracking-widest mb-6">
                 <Activity size={16} /> API Calls (24H)
               </div>
-              <div className="text-7xl font-light text-white tracking-tighter">
-                <Counter value={data.stats.totalApiCallsToday} />
+              <div className="flex items-end gap-3">
+                <div className="text-7xl font-light text-white tracking-tighter">
+                  <Counter value={data.stats.totalApiCallsToday} />
+                </div>
+                {data.stats.apiCallsYesterday !== undefined && (
+                  <div className={`flex items-center mb-2 ${data.stats.totalApiCallsToday >= data.stats.apiCallsYesterday ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {data.stats.totalApiCallsToday >= data.stats.apiCallsYesterday ? <ArrowUp size={48} strokeWidth={2} /> : <ArrowDown size={48} strokeWidth={2} />}
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -311,8 +322,9 @@ export default function AdminStatsPage() {
                       <th className="py-5 px-6 font-medium">Contact</th>
                       <th className="py-5 px-6 font-medium">Clearance</th>
                       <th className="py-5 px-6 font-medium">Deployed</th>
-                      <th className="py-5 px-6 font-medium text-right">Missions</th>
-                      <th className="py-5 px-6 font-medium text-right">Requests</th>
+                      <th className="py-5 px-6 font-medium text-right">Saved Trips</th>
+                      <th className="py-5 px-6 font-medium text-right">Lifetime Requests</th>
+                      <th className="py-5 px-6 font-medium text-right">Requests Today</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm">
@@ -351,6 +363,9 @@ export default function AdminStatsPage() {
                             </td>
                             <td className="py-4 px-6 text-right font-light text-white text-lg">{u._count.tripHistories}</td>
                             <td className="py-4 px-6 text-right font-light text-white text-lg">
+                              {(u.apiCallsFlights || 0) + (u.apiCallsTrains || 0) + (u.apiCallsBusses || 0) + (u.apiCallsHotels || 0) + (u.apiCallsPlaces || 0)}
+                            </td>
+                            <td className="py-4 px-6 text-right font-light text-white text-lg">
                               <div className="flex flex-col items-end group relative">
                                 <span>{u.apiCalls}</span>
                                 
@@ -381,20 +396,9 @@ export default function AdminStatsPage() {
                                     <div className="text-[10px] font-bold uppercase tracking-widest text-white/30 col-span-2 border-b border-white/10 pb-2 mb-1">API Usage Breakdown</div>
                                     <div className="flex justify-between items-center text-xs"><span className="text-white/60">Flights</span> <span className="font-mono text-white/90">{u.apiCallsFlights || 0}</span></div>
                                     <div className="flex justify-between items-center text-xs"><span className="text-white/60">Trains</span> <span className="font-mono text-white/90">{u.apiCallsTrains || 0}</span></div>
-                                    <div className="flex justify-between items-center text-xs"><span className="text-white/60">Busses</span> <span className="font-mono text-white/90">{u.apiCallsBusses || 0}</span></div>
+                                    <div className="flex justify-between items-center text-xs"><span className="text-white/60">Buses</span> <span className="font-mono text-white/90">{u.apiCallsBusses || 0}</span></div>
                                     <div className="flex justify-between items-center text-xs"><span className="text-white/60">Hotels</span> <span className="font-mono text-white/90">{u.apiCallsHotels || 0}</span></div>
                                     <div className="flex justify-between items-center text-xs"><span className="text-white/60">Places</span> <span className="font-mono text-white/90">{u.apiCallsPlaces || 0}</span></div>
-                                  </div>
-                                  <div className="w-full max-w-sm ml-auto mt-4 pt-4 border-t border-white/5 flex justify-end">
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedUserForModal({ id: u.id, name: u.name });
-                                      }}
-                                      className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded transition-colors"
-                                    >
-                                      View History & Graphs
-                                    </button>
                                   </div>
                                 </td>
                               </motion.tr>
@@ -417,14 +421,6 @@ export default function AdminStatsPage() {
 
           </div>
         </motion.div>
-
-        {selectedUserForModal && (
-          <UserTelemetryModal
-            userId={selectedUserForModal.id}
-            userName={selectedUserForModal.name}
-            onClose={() => setSelectedUserForModal(null)}
-          />
-        )}
       </div>
     </AppShell>
   );
