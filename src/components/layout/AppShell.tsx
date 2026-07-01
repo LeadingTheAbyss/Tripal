@@ -12,9 +12,14 @@ import smallLogo from '@/app/icon.png';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const budget = useBudgetStore();
-  const { user } = useAuthStore();
+  const { user, fetchUser } = useAuthStore();
   const [isNotificationDismissed, setIsNotificationDismissed] = useState(false);
   const [purseExpanded, setPurseExpanded] = useState(true);
+
+  // Fetch user on mount if not already fetched
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
   
   // Theme state
   const [isDark, setIsDark] = useState(true);
