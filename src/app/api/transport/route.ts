@@ -68,9 +68,9 @@ export async function GET(req: Request) {
       );
     }
 
-    if (mode === 'flights' || mode === 'all') flightsCalls++;
-    if (mode === 'trains' || mode === 'all') trainsCalls++;
-    if (mode === 'busses' || mode === 'all') bussesCalls++;
+    if (mode === 'flight' || mode === 'all') flightsCalls++;
+    if (mode === 'train' || mode === 'all') trainsCalls++;
+    if (mode === 'bus' || mode === 'all') bussesCalls++;
 
     // Update user call count
     await prisma.user.update({
@@ -83,6 +83,16 @@ export async function GET(req: Request) {
         lastApiCallDate: now
       }
     });
+
+    const nowIST = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    const todayString = `${nowIST.getFullYear()}-${String(nowIST.getMonth()+1).padStart(2,'0')}-${String(nowIST.getDate()).padStart(2,'0')}`;
+    if (prisma.dailyUserStat) {
+      await prisma.dailyUserStat.upsert({
+        where: { userId_date: { userId: user.id, date: todayString } },
+        update: { apiCalls: { increment: 1 } },
+        create: { userId: user.id, date: todayString, apiCalls: 1 }
+      });
+    }
 
     // 3. Proxy to Python Backend
     const response = await fetch(`${PYTHON_API_URL}/transport?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}&mode=${mode}`);

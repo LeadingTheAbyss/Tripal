@@ -31,27 +31,9 @@ export async function GET() {
     }
 
     // Admin verified. Fetch stats.
+
     const totalUsers = await prisma.user.count();
-    const totalTrips = await prisma.tripHistory.count();
-
-    // API calls today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const apiCallsTodayAggr = await prisma.user.aggregate({
-      _sum: {
-        apiCalls: true
-      },
-      where: {
-        lastApiCallDate: {
-          gte: today
-        }
-      }
-    });
-    
-    const totalApiCallsToday = apiCallsTodayAggr._sum.apiCalls || 0;
-
-    // Fetch API Breakdown globally by summing user metrics
+    // API Calls All Time (Sum of lifetime specific metrics)
     const apiMetricsAggr = await prisma.user.aggregate({
       _sum: {
         apiCallsFlights: true,
@@ -62,10 +44,44 @@ export async function GET() {
       }
     });
     
+    const totalApiCallsAllTime = 
+      (apiMetricsAggr._sum.apiCallsFlights || 0) +
+      (apiMetricsAggr._sum.apiCallsTrains || 0) +
+      (apiMetricsAggr._sum.apiCallsBusses || 0) +
+      (apiMetricsAggr._sum.apiCallsHotels || 0) +
+      (apiMetricsAggr._sum.apiCallsPlaces || 0);
+
+    // API calls today and yesterday for trend
+    const now = new Date();
+    const nowIST = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    const todayStr = `${nowIST.getFullYear()}-${String(nowIST.getMonth()+1).padStart(2,'0')}-${String(nowIST.getDate()).padStart(2,'0')}`;
+    
+    const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayIST = new Date(yesterdayDate.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    const yesterdayStr = `${yesterdayIST.getFullYear()}-${String(yesterdayIST.getMonth()+1).padStart(2,'0')}-${String(yesterdayIST.getDate()).padStart(2,'0')}`;
+
+    let totalApiCallsToday = 0;
+    let apiCallsYesterday = 0;
+
+    if (prisma.dailyUserStat) {
+      const dailyStatsAggr = await prisma.dailyUserStat.groupBy({
+        by: ['date'],
+        where: {
+          date: { in: [todayStr, yesterdayStr] }
+        },
+        _sum: { apiCalls: true }
+      });
+
+      totalApiCallsToday = dailyStatsAggr.find(d => d.date === todayStr)?._sum.apiCalls || 0;
+      apiCallsYesterday = dailyStatsAggr.find(d => d.date === yesterdayStr)?._sum.apiCalls || 0;
+    }
+
+
+    
     const apiBreakdown = {
       "Flights": apiMetricsAggr._sum.apiCallsFlights || 0,
       "Trains": apiMetricsAggr._sum.apiCallsTrains || 0,
-      "Busses": apiMetricsAggr._sum.apiCallsBusses || 0,
+      "Buses": apiMetricsAggr._sum.apiCallsBusses || 0,
       "Hotels": apiMetricsAggr._sum.apiCallsHotels || 0,
       "Places": apiMetricsAggr._sum.apiCallsPlaces || 0,
     };
@@ -97,8 +113,9 @@ export async function GET() {
     return NextResponse.json({
       stats: {
         totalUsers,
-        totalTrips,
+        totalApiCallsAllTime,
         totalApiCallsToday,
+        apiCallsYesterday,
         apiBreakdown
       },
       users
