@@ -191,10 +191,12 @@ def _fetch_photon_cities(q: str) -> List[Dict[str, Any]]:
     if not q or len(q) < 2:
         return []
 
-    url = "https://photon.komoot.io/api/?osm_tag=place:city&osm_tag=place:town"
+    search_query = q if "india" in q.lower() else f"{q} India"
+
+    url = "https://photon.komoot.io/api/?osm_tag=place:city&osm_tag=place:town&osm_tag=place:state&osm_tag=place:district&osm_tag=place:village&osm_tag=place:island&osm_tag=place:region"
     params = {
-        "q": q,
-        "limit": 5
+        "q": search_query,
+        "limit": 15
     }
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
@@ -209,10 +211,16 @@ def _fetch_photon_cities(q: str) -> List[Dict[str, Any]]:
         features = data.get("features", [])
         
         if not features:
-            print(f"[Debug] Photon returned no features for query: '{q}'")
+            print(f"[Debug] Photon returned no features for query: '{search_query}'")
             
         for feature in features:
             props = feature.get("properties", {})
+            countrycode = props.get("countrycode", "").upper()
+            
+            # Strict filter to India only
+            if countrycode != "IN":
+                continue
+                
             geom = feature.get("geometry", {})
             
             name = props.get("name", "Unknown")
@@ -235,6 +243,9 @@ def _fetch_photon_cities(q: str) -> List[Dict[str, Any]]:
                 "osrm_coords": osrm_coords
             })
             
+            if len(results) >= 5:
+                break
+                
         return results
         
     except Exception as e:

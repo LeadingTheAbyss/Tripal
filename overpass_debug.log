@@ -7,49 +7,21 @@ Query:
         );
         out center;
         
-Response status: 200
-Response text: {
-  "version": 0.6,
-  "generator": "Overpass API 0.7.62.11 87bfad18",
-  "osm3s": {
-    "timestamp_osm_base": "2026-07-01T20:18:55Z",
-    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
-  },
-  "elements": [
+Response status: 504
+Response text: <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" lang="en"/>
+  <title>OSM3S Response</title>
+</head>
+<body>
 
-{
-  "type": "node",
-  "id": 4731492121,
-  "lat": 26.8429071,
-  "lon": 81.0221519,
-  "tags": {
-    "addr:housenumber": "142A",
-    "addr:postcode": "226010",
-    "addr:street": "Khargapur Gomtinagar",
-    "email": "dharmpalsingh1160@gmail.com",
-    "name": "Sai Sadan 142A Kaushalpuri Colony",
-    "name:en": "Hindi",
-    "name:hi": "Sai Sadan 142A Kaushalpuri Colony",
-    "phone": "7607805441",
-    "tourism": "attraction"
-  }
-},
-{
-  "type": "node",
-  "id": 5338661622,
-  "lat": 26.8523340,
-  "lon": 80.9320508,
-  "tags": {
-    "name": "Safed Baradan",
-    "tourism": "attraction"
-  }
-},
-{
-  "type": "node",
-  "id": 5839453488,
-  "lat": 26.8609040,
-  "lon": 80.9258774,
-  "tags": {
-    "addr:postcode": "226001",
-    "ad
-Places parsed: 13
+<p>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</p>
+<p><strong style="color:#FF0000">Error</strong>: runtime error: open64: 0 Success /osm3s_osm_base Dispatcher_Client::request_read_and_idx::timeout. The server is probably too busy to handle your request. </p>
+
+</body>
+</html>
+
+Exception: 504 Server Error: Gateway Timeout for url: https://overpass-api.de/api/interpreter

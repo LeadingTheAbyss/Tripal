@@ -190,10 +190,7 @@ def validate_payload(data: List[dict]) -> bool:
 async def get_live_bus_data(origin: str, destination: str, travel_date: str) -> dict:
     """The Multi-Source Redundancy Pipeline."""
     scraping_pipeline = [
-        fetch_redbus_api,       # Strategy 1 (Live redBus API via parse.bot)
-        scrape_redbus_mobile,   # Strategy 2
-        scrape_abhibus_mobile,  # Strategy 3
-        scrape_state_srtc       # Strategy 4
+        fetch_redbus_api       # Strategy 1 (Live redBus API via parse.bot)
     ]
     
     for scrape_strategy in scraping_pipeline:
@@ -201,7 +198,7 @@ async def get_live_bus_data(origin: str, destination: str, travel_date: str) -> 
             # Attempt to extract the 4 required fields
             bus_listings = await scrape_strategy(origin, destination, travel_date)
             
-            if bus_listings and validate_payload(bus_listings):
+            if isinstance(bus_listings, list) and validate_payload(bus_listings):
                 logging.info(f"Successfully retrieved live data using {scrape_strategy.__name__}")
                 return {
                     "status": "success",

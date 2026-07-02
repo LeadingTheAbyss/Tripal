@@ -293,10 +293,7 @@ async def search_live_trains(origin_city: str, dest_city: str, date: str) -> Lis
 
 def _get_fallback_trains(source, dest, date_str):
     """Provides graceful fallback if the API fails or rate-limits so the planner doesn't crash."""
-    d = datetime.strptime(date_str, "%Y-%m-%d")
-    return [
-        TransportOption(id="t2_fallback", type=TransportType.TRAIN, departure=d.replace(hour=18), arrival=d+timedelta(days=1, hours=8), duration_hours=14.0, price=1500, safety_score=8, comfort_score=6, provider="Shatabdi Express (Fallback)"),
-    ]
+    return []
 
 async def get_train_route(train_number: str):
     """Fetches the full timetable (stops) of a specific train from RailRadar."""

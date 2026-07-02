@@ -370,7 +370,7 @@ export default function RecommendPage() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-16 text-right pl-8">
+                      <div className="flex items-center gap-12 text-right pl-8">
                         <div>
                           <p className="text-xs text-neutral-600 font-bold uppercase tracking-[0.2em] mb-2">Score</p>
                           <p className="text-2xl font-light text-white">{dest.matchScore}%</p>
@@ -379,7 +379,11 @@ export default function RecommendPage() {
                           <p className="text-xs text-neutral-600 font-bold uppercase tracking-[0.2em] mb-2">Budget</p>
                           <p className="text-2xl font-light text-white">₹{dest.budgetEstimate?.toLocaleString()}</p>
                         </div>
-                        <div className="w-16 h-16 flex items-center justify-center rounded-full border border-neutral-800 group-hover:bg-white group-hover:text-black group-hover:border-white transition-all duration-500">
+                        <div>
+                          <p className="text-xs text-neutral-600 font-bold uppercase tracking-[0.2em] mb-2">Per Person</p>
+                          <p className="text-2xl font-light text-white">~₹{dest.perPersonEstimate?.toLocaleString()}</p>
+                        </div>
+                        <div className="w-16 h-16 shrink-0 flex items-center justify-center rounded-full border border-neutral-800 group-hover:bg-white group-hover:text-black group-hover:border-white transition-all duration-500">
                           <ArrowRight size={24} className="opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500"/>
                         </div>
                       </div>

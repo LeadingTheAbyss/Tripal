@@ -17,9 +17,9 @@ A group of {num_pax} travelers want to take a trip.
 - Duration: {days} days (excluding travel days)
 - Primary preference: {preference} (e.g. mountains, beaches, heritage, desert, wildlife, spiritual)
 
-Recommend 6 destinations in India. 
-- The first 3 destinations MUST match their primary preference ("{preference}"). 
-- The other 3 destinations MUST be of different categories (e.g., if they like beaches, show mountains or heritage) to give them alternative options.
+Recommend 15 destinations in India. 
+- The first 10 destinations MUST match their primary preference ("{preference}"). 
+- The other 5 destinations MUST be of different categories (e.g., if they like beaches, show mountains or heritage) to give them alternative options.
 
 Respond ONLY with a JSON object containing a "destinations" array, where each item matches this EXACT structure:
 {{
@@ -45,7 +45,7 @@ Rules:
 - perPersonEstimate MUST be mathematically equal to (budgetEstimate / {num_pax}).
 - matchScore is 0-100. Primary preference destinations score 80-100, others score 50-79.
 - isPrimaryMatch is true ONLY for destinations matching "{preference}".
-- Return EXACTLY 6 destinations.
+- Return EXACTLY 15 destinations.
 - DO NOT use any emojis anywhere in the response text, tags, or names.
 """
 
