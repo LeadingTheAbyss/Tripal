@@ -22,6 +22,69 @@ def _parse_days_of_operation(days_str: str) -> List[int]:
             days.append(i - 1)
     return days if days else [0, 1, 2, 3, 4, 5, 6]
 
+def calculate_dynamic_price(origin_iata: str, dest_iata: str, flight_date: datetime, duration_hours: float) -> float:
+    # Base price calculation
+    base_price = 2500 + (duration_hours * 2200)
+    
+    # 1. Proximity to flight date
+    today = datetime.now().date()
+    flight_dt = flight_date.date()
+    days_to_flight = (flight_dt - today).days
+    
+    multiplier = 1.0
+    if days_to_flight < 0:
+        days_to_flight = 0
+        
+    if days_to_flight <= 2:
+        multiplier += 0.40  # 40% increase for very last minute
+    elif days_to_flight <= 7:
+        multiplier += 0.25  # 25% increase for next week
+    elif days_to_flight <= 15:
+        multiplier += 0.10  # 10% increase for next 2 weeks
+    elif days_to_flight >= 60:
+        multiplier -= 0.10 # 10% discount for booking well in advance
+
+    # 2. General and Specific Festivals
+    month = flight_dt.month
+    day = flight_dt.day
+    
+    dest = dest_iata.upper()
+    
+    # Bihar airports for Chhath Puja
+    bihar_airports = {'PAT', 'GAY', 'DBG'}
+    # Kerala and Karnataka for Christmas/New Year
+    kerala_karnataka_airports = {'COK', 'TRV', 'CCJ', 'CNN', 'BLR', 'IXE', 'HBX', 'MYQ', 'VDX'}
+    
+    # Chhath Puja (Approx Nov 1 - Nov 15)
+    if month == 11 and 1 <= day <= 15:
+        if dest in bihar_airports:
+            multiplier += 0.40  # 40% increase due to Chhath Puja rush
+        else:
+            multiplier += 0.10 # General festival season increase
+            
+    # Diwali (Approx late Oct to early Nov)
+    if (month == 10 and day >= 20) or (month == 11 and day <= 5):
+        multiplier += 0.15 # General Diwali rush
+
+    # Christmas & New Year (Dec 20 - Jan 5)
+    if (month == 12 and day >= 20) or (month == 1 and day <= 5):
+        if dest in kerala_karnataka_airports:
+            multiplier += 0.35  # 35% increase for popular winter destinations
+        else:
+            multiplier += 0.15 # General holiday season increase
+            
+    # Summer Vacations (May - June)
+    if month in [5, 6]:
+        multiplier += 0.10
+
+    final_price = base_price * multiplier
+    
+    # Add a bit of randomness to make it look realistic (± 5%)
+    random_factor = random.uniform(0.95, 1.05)
+    final_price = final_price * random_factor
+    
+    return float(round(final_price, -2))
+
 async def search_live_flights(origin_iata: str, dest_iata: str, date: str) -> List[TransportOption]:
     print(f"\n[API Call] Fetching live flights (DGCA PDF): {origin_iata} -> {dest_iata} on {date}...")
     
@@ -76,7 +139,7 @@ async def search_live_flights(origin_iata: str, dest_iata: str, date: str) -> Li
                 print(f"[DGCA Error] Time parsing failed for {flight['flight_no']}: {e}")
                 continue
                 
-            price = 3000 + (duration_hours * 1500)
+            price = calculate_dynamic_price(origin_iata, dest_iata, dep_dt, duration_hours)
             
             options.append(TransportOption(
                 id=f"dgca_fl_{idx}",
@@ -157,7 +220,7 @@ async def search_live_flights(origin_iata: str, dest_iata: str, date: str) -> Li
                                 if arr_dt < dep_dt:
                                     arr_dt += timedelta(days=1)
                                 duration_hours = (arr_dt - dep_dt).total_seconds() / 3600.0
-                                price = 3000 + (duration_hours * 1500)
+                                price = calculate_dynamic_price(origin_iata, dest_iata, dep_dt, duration_hours)
                                 
                                 options.append(TransportOption(
                                     id=f"dgca_fl_fb_{idx}",
